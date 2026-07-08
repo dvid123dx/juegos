@@ -307,6 +307,7 @@ function goWiring(exId) {
   const btnCheck = document.getElementById("btn-check");
   const btnHint = document.getElementById("btn-hint");
   const btnClear = document.getElementById("btn-clear");
+  const btnUndo = document.getElementById("btn-undo");
   const btnSim = document.getElementById("btn-simulate");
 
   let solvedOnce = false;
@@ -375,6 +376,16 @@ function goWiring(exId) {
     diagram.markValidation({ results: exercise.nets.map((n) => ({ net: n, ok: false })) });
     statusEl.textContent = "Cableado borrado.";
     statusEl.className = "wiring-status";
+    btnSim.disabled = true;
+  });
+
+  btnUndo.addEventListener("click", () => {
+    if (diagram.undoLastWire()) {
+      statusEl.textContent = `Último cable eliminado. Cables colocados: ${diagram.wireCount()}`;
+      statusEl.className = "wiring-status";
+    } else {
+      statusEl.textContent = "No hay cables que deshacer.";
+    }
     btnSim.disabled = true;
   });
 
