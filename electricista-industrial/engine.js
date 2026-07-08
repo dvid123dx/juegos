@@ -30,7 +30,20 @@ function screwAt(g, x, y, r) {
   g.appendChild(svgEl("line", { x1: x - r * 0.55, y1: y, x2: x + r * 0.55, y2: y, class: "screw-slot" }));
 }
 
-let DEFS_BUILT = new WeakSet();
+// draws an extruded "isometric" block (front + top + right-side faces) so a
+// housing reads as a real 3D enclosure instead of a flat rectangle
+function isoBox(g, x, y, w, h, rx, depth, faceCls, topCls, sideCls) {
+  const hw = w / 2, hh = h / 2;
+  g.appendChild(svgEl("polygon", {
+    points: `${x + hw},${y - hh} ${x + hw},${y + hh} ${x + hw + depth},${y + hh - depth} ${x + hw + depth},${y - hh - depth}`,
+    class: sideCls,
+  }));
+  g.appendChild(svgEl("polygon", {
+    points: `${x - hw},${y - hh} ${x + hw},${y - hh} ${x + hw + depth},${y - hh - depth} ${x - hw + depth},${y - hh - depth}`,
+    class: topCls,
+  }));
+  g.appendChild(svgEl("rect", { x: x - hw, y: y - hh, width: w, height: h, rx: rx || 0, class: faceCls }));
+}
 function buildDefs(svg) {
   const defs = svgEl("defs", {});
   defs.innerHTML = `
@@ -167,7 +180,7 @@ TPL.coil = (label, sub) => ({
   draw(g) {
     g.appendChild(svgEl("line", { x1: 0, y1: -30, x2: 0, y2: -22, class: "cable-core" }));
     g.appendChild(svgEl("line", { x1: 0, y1: 22, x2: 0, y2: 30, class: "cable-core" }));
-    g.appendChild(svgEl("rect", { x: -19, y: -22, width: 38, height: 44, rx: 6, class: "relay-shell", filter: "url(#fDrop)" }));
+    isoBox(g, 0, 0, 38, 44, 6, 7, "relay-shell", "relay-top", "relay-side");
     g.appendChild(svgEl("rect", { x: -19, y: -22, width: 38, height: 9, rx: 4, class: "relay-toplight" }));
     g.appendChild(svgEl("rect", { x: -15, y: -8, width: 30, height: 21, rx: 3, class: "nameplate" }));
     g.appendChild(text(0, 1, label, "nameplate-label"));
@@ -218,6 +231,7 @@ TPL.button = (kind, ref, t1, t2) => ({
   restClosed: kind === "NC",
   draw(g) {
     contactGap(g, kind, -23, 23);
+    g.appendChild(svgEl("ellipse", { cx: 1.5, cy: 2, rx: 12.5, ry: 11, class: "mount-base" }));
     g.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 12.5, class: "bezel-ring", filter: "url(#fDrop)" }));
     g.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 9, class: (kind === "NO" ? "btn-dome dome-green" : "btn-dome dome-red") + " btn-pressable" }));
     g.appendChild(text(18, 3, ref, "sym-ref", "start"));
@@ -233,6 +247,7 @@ TPL.lamp = (label, color) => ({
   draw(g) {
     g.appendChild(svgEl("line", { x1: 0, y1: -20, x2: 0, y2: -11, class: "cable-core" }));
     g.appendChild(svgEl("line", { x1: 0, y1: 11, x2: 0, y2: 20, class: "cable-core" }));
+    g.appendChild(svgEl("ellipse", { cx: 1.5, cy: 2, rx: 12.5, ry: 11, class: "mount-base" }));
     g.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 12.5, class: "bezel-ring", filter: "url(#fDrop)" }));
     g.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 9.5, class: "lamp-glass lamp-" + color }));
     g.appendChild(text(0, 4, label, "lamp-caption"));
@@ -295,7 +310,7 @@ TPL.breaker = (ref, tin, tout) => ({
   draw(g) {
     g.appendChild(svgEl("line", { x1: 0, y1: -24, x2: 0, y2: -16, class: "cable-core" }));
     g.appendChild(svgEl("line", { x1: 0, y1: 16, x2: 0, y2: 24, class: "cable-core" }));
-    g.appendChild(svgEl("rect", { x: -13, y: -16, width: 26, height: 32, rx: 4, class: "brk-body", filter: "url(#fDrop)" }));
+    isoBox(g, 0, 0, 26, 32, 4, 6, "brk-body", "brk-top", "brk-side");
     g.appendChild(svgEl("rect", { x: -5, y: -10, width: 10, height: 20, rx: 3, class: "brk-lever btn-pressable" }));
     g.appendChild(text(17, 3, ref, "sym-ref", "start"));
     screwAt(g, 0, -24);
@@ -818,14 +833,16 @@ class Diagram {
     if (Math.abs(pa.x - pb.x) < 1 || Math.abs(pa.y - pb.y) < 1) {
       d = `M${pa.x},${pa.y} L${pb.x},${pb.y}`;
     } else {
-      // route with a short jog near whichever terminal sits higher up, and
-      // nudge that jog by a hash of this specific wire's endpoints so wires
-      // fanning out from the same rail/point spread into distinct lanes
-      // instead of stacking exactly on top of each other
+      // spread the elbow across almost the whole vertical span between the
+      // two terminals, at a fraction picked from a hash of this specific
+      // wire's endpoints, so every wire takes a visibly different path
+      // instead of many wires bunching along the same line
       const key = a < b ? a + "|" + b : b + "|" + a;
-      const jitter = (hashStr(key) % 9 - 4) * 6;
+      const h = hashStr(key);
       const top = Math.min(pa.y, pb.y), bottom = Math.max(pa.y, pb.y);
-      const jogY = Math.min(Math.max(top + 22 + jitter, top + 4), bottom - 4);
+      const span = Math.max(bottom - top, 1);
+      const frac = 0.12 + (h % 89) / 100; // 0.12 .. 1.00 of the span
+      const jogY = Math.min(Math.max(top + span * frac, top + 4), bottom - 4);
       d = `M${pa.x},${pa.y} L${pa.x},${jogY} L${pb.x},${jogY} L${pb.x},${pb.y}`;
     }
     const group = svgEl("g", { class: "wire-group" + (isStatic ? " wire-static" : "") });

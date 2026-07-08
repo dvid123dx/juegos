@@ -217,6 +217,17 @@ function buildPanel3D(box, exercise, diagram) {
   const lamps = exercise.components.filter((c) => c.tpl.isLamp);
   const items = {};
 
+  // size the panel to how many pieces it actually holds, with a tight,
+  // constant pitch between them, instead of always stretching to a fixed
+  // width — so 2 buttons sit close together and 4 still all fit on screen
+  const PITCH = 92;
+  const cols = Math.max(buttons.length, lamps.length, 1);
+  const boxW = Math.max(200, cols * PITCH + 40);
+  const rows = (buttons.length ? 1 : 0) + (lamps.length ? 1 : 0);
+  const boxH = rows >= 2 ? 178 : 110;
+  box.style.width = boxW + "px";
+  box.style.height = boxH + "px";
+
   const nameplate = document.createElement("div");
   nameplate.className = "p3d-nameplate";
   nameplate.textContent = exercise.title.split("—")[0].trim().toUpperCase();
@@ -224,8 +235,10 @@ function buildPanel3D(box, exercise, diagram) {
 
   function place(list, y) {
     const n = list.length;
+    const rowW = n * PITCH;
+    const startX = (boxW - rowW) / 2 + PITCH / 2;
     list.forEach((comp, i) => {
-      const x = (420 / (n + 1)) * (i + 1);
+      const x = startX + i * PITCH;
       const el = document.createElement("div");
       el.className = "p3d-item";
       el.style.left = x - 27 + "px";
@@ -258,8 +271,8 @@ function buildPanel3D(box, exercise, diagram) {
     });
   }
 
-  place(buttons, 32);
-  place(lamps, 120);
+  place(buttons, 28);
+  place(lamps, buttons.length ? 100 : 28);
 
   function refresh() {
     for (const comp of lamps) {

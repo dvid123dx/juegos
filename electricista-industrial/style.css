@@ -228,7 +228,9 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .screw-slot { stroke: #4a5266; stroke-width: 1.2; }
 
 /* contactor / relay / bobina */
-.relay-shell { fill: url(#gShell); stroke: #0d1526; stroke-width: 1; transition: filter 0.2s; }
+.relay-shell { fill: url(#gShell); stroke: #0d1526; stroke-width: 1; transition: filter 0.2s; filter: url(#fDrop); }
+.relay-top { fill: #aebbdf; opacity: 0.95; }
+.relay-side { fill: #141d33; opacity: 0.95; }
 .relay-toplight { fill: url(#gShellTop); opacity: 0.85; }
 .relay-rib { stroke: #0d1526; stroke-width: 1; opacity: 0.5; }
 .nameplate { fill: url(#gPlate); stroke: #000; stroke-width: 0.6; transition: fill 0.2s; }
@@ -252,7 +254,8 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .nc-mark { stroke: #7f93b8; stroke-width: 1.6; }
 
 /* botonera: aro cromado + capuchon de color */
-.bezel-ring { fill: url(#gBezel); stroke: #4a5266; stroke-width: 0.8; }
+.mount-base { fill: #0a1120; opacity: 0.65; }
+.bezel-ring { fill: url(#gBezel); stroke: #4a5266; stroke-width: 0.8; filter: url(#fDrop); }
 .btn-dome { stroke-width: 0.8; transition: filter 0.15s; }
 .dome-green { fill: url(#gDomeGreenOff); stroke: #0a4a26; }
 .dome-red { fill: url(#gDomeRedOff); stroke: #4a0a08; }
@@ -351,7 +354,9 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 @keyframes hornPulse { 0% { opacity: 0.9; transform: scale(0.7); } 100% { opacity: 0; transform: scale(1.3); } }
 
 /* guardamotor / breaker interactivo */
-.brk-body { fill: url(#gShell); stroke: #0d1526; stroke-width: 1; }
+.brk-body { fill: url(#gShell); stroke: #0d1526; stroke-width: 1; filter: url(#fDrop); }
+.brk-top { fill: #aebbdf; opacity: 0.95; }
+.brk-side { fill: #141d33; opacity: 0.95; }
 .brk-lever { fill: #c23b3b; stroke: #4a0a08; stroke-width: 0.8; transition: transform 0.15s; transform-box: fill-box; transform-origin: center; }
 .component.closed .brk-lever { fill: #2fae57; transform: translateY(-4px); }
 
@@ -407,22 +412,22 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .panel3d-title span { color: var(--ink-dim); font-weight: 400; font-size: 13px; }
 
 .panel3d-stage {
-  width: 100%; height: 300px; perspective: 1100px;
+  width: 100%; height: 280px; perspective: 1100px;
   display: flex; align-items: center; justify-content: center;
-  cursor: grab; touch-action: none;
+  cursor: grab; touch-action: none; overflow: visible;
   background: radial-gradient(ellipse at center, rgba(53,209,200,0.06), transparent 70%);
   border: 1px solid var(--line); border-radius: 14px;
 }
 .panel3d-stage:active { cursor: grabbing; }
 
 .panel3d-box {
-  position: relative; width: 420px; height: 190px;
+  position: relative; width: 420px; height: 190px; max-width: 90vw;
   transform-style: preserve-3d;
   background: linear-gradient(160deg, #33425f, #131d31);
   border: 2px solid #060a14;
   border-radius: 10px;
   box-shadow: 0 20px 50px rgba(0,0,0,0.6), inset 0 2px 8px rgba(255,255,255,0.08);
-  transition: transform 0.05s linear;
+  transition: transform 0.05s linear, width 0.15s, height 0.15s;
 }
 
 .p3d-item {
