@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>GRAVIDAD — Asteroids en blanco y negro</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="bg"></canvas>
+  <canvas id="game"></canvas>
+  <div id="vignette"></div>
+  <div id="scanlines"></div>
+
+  <div id="hud">
+    <div id="hud-left">
+      <div id="score">PUNTOS: 0000</div>
+      <div id="wave">OLA: 1</div>
+    </div>
+    <div id="hud-right">
+      <div id="lives">VIDAS: <span id="lives-icons"></span></div>
+    </div>
+  </div>
+
+  <div id="overlay">
+    <div id="overlay-inner">
+      <h1 id="title">GRAVIDAD</h1>
+      <p id="subtitle">un asteroids en blanco y negro, difuminado por el vacío</p>
+      <p id="msg">Pulsa cualquier tecla, clic o toca la pantalla para empezar</p>
+      <div id="instructions">
+        <div>◀ ▶ / A D — rotar</div>
+        <div>▲ / W — impulso</div>
+        <div>ESPACIO — disparar</div>
+        <div>P — pausa</div>
+      </div>
+      <p id="warn">Cuidado con los pozos de gravedad: te atraen y pueden devorar tu nave.</p>
+    </div>
+  </div>
+
+  <div id="touch-controls">
+    <div class="tc-left">
+      <button id="tc-left" class="tc-btn">◀</button>
+      <button id="tc-right" class="tc-btn">▶</button>
+    </div>
+    <div class="tc-right">
+      <button id="tc-thrust" class="tc-btn">▲</button>
+      <button id="tc-fire" class="tc-btn tc-fire">●</button>
+    </div>
+  </div>
+
+<script src="game.js"></script>
+</body>
+</html>
