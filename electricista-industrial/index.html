@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Electricista Industrial — Simulador de Arranques</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header id="topbar">
+  <div id="topbar-left">
+    <button id="btn-home" class="icon-btn" title="Menú principal">⌂</button>
+    <span id="crumb">Electricista Industrial</span>
+  </div>
+  <div id="topbar-right">
+    <span id="score-badge">Puntos: 0</span>
+  </div>
+</header>
+
+<main id="app"></main>
+
+<template id="tpl-menu">
+  <section class="screen menu-screen">
+    <h1 class="brand">ELECTRICISTA <span>INDUSTRIAL</span></h1>
+    <p class="brand-sub">Simulador de arranques de motores — control, fuerza, planos y teoría</p>
+    <div class="menu-grid">
+      <button class="menu-card" data-nav="explorer">
+        <span class="menu-icon">⧉</span>
+        <span class="menu-title">Explorador de Componentes</span>
+        <span class="menu-desc">Gira e inspecciona en 3D contactores, relés, botones, motores y más</span>
+      </button>
+      <button class="menu-card" data-nav="challenges">
+        <span class="menu-icon">⌁</span>
+        <span class="menu-title">Retos de Cableado</span>
+        <span class="menu-desc">Arma circuitos de control y fuerza: directo, estrella-triángulo, autotransformador y reversa</span>
+      </button>
+      <button class="menu-card" data-nav="planos">
+        <span class="menu-icon">▤</span>
+        <span class="menu-title">Planos de Referencia</span>
+        <span class="menu-desc">Consulta los diagramas ya resueltos antes de intentar un reto</span>
+      </button>
+      <button class="menu-card" data-nav="quiz">
+        <span class="menu-icon">?</span>
+        <span class="menu-title">Quiz Teórico</span>
+        <span class="menu-desc">Pon a prueba lo aprendido con preguntas de opción múltiple</span>
+      </button>
+    </div>
+  </section>
+</template>
+
+<template id="tpl-explorer">
+  <section class="screen explorer-screen">
+    <h2 class="screen-title">Explorador de Componentes</h2>
+    <p class="screen-sub">Arrastra sobre la tarjeta para girar el componente. Haz clic en la lista para cambiar de pieza.</p>
+    <div class="explorer-layout">
+      <div class="explorer-list" id="explorer-list"></div>
+      <div class="explorer-stage">
+        <div class="stage3d" id="stage3d">
+          <div class="cube" id="cube3d"></div>
+        </div>
+        <div class="explorer-info" id="explorer-info"></div>
+      </div>
+    </div>
+  </section>
+</template>
+
+<template id="tpl-challenges">
+  <section class="screen challenges-screen">
+    <h2 class="screen-title">Retos de Cableado</h2>
+    <p class="screen-sub">Elige un método de arranque y practica su circuito de control o de fuerza.</p>
+    <div class="challenge-groups" id="challenge-groups"></div>
+  </section>
+</template>
+
+<template id="tpl-wiring">
+  <section class="screen wiring-screen">
+    <div class="wiring-header">
+      <h2 class="screen-title" id="wiring-title"></h2>
+      <p class="screen-sub" id="wiring-brief"></p>
+    </div>
+    <div class="wiring-layout">
+      <div class="wiring-canvas-wrap">
+        <svg id="wiring-svg" class="wiring-svg"></svg>
+      </div>
+      <div class="wiring-side">
+        <div class="wiring-status" id="wiring-status">Conecta las terminales haciendo clic en una y luego en otra.</div>
+        <div class="wiring-actions">
+          <button id="btn-check" class="btn btn-primary">Verificar cableado</button>
+          <button id="btn-hint" class="btn">Pista</button>
+          <button id="btn-clear" class="btn btn-danger">Borrar todo</button>
+        </div>
+        <button id="btn-simulate" class="btn btn-accent" disabled>▶ Simular arranque</button>
+        <div class="wiring-log" id="wiring-log"></div>
+      </div>
+    </div>
+  </section>
+</template>
+
+<template id="tpl-planos">
+  <section class="screen planos-screen">
+    <h2 class="screen-title">Planos de Referencia</h2>
+    <p class="screen-sub">Diagramas ya resueltos — consúltalos antes o después de intentar un reto.</p>
+    <div class="planos-list" id="planos-list"></div>
+    <div class="wiring-canvas-wrap">
+      <svg id="planos-svg" class="wiring-svg"></svg>
+    </div>
+  </section>
+</template>
+
+<template id="tpl-quiz">
+  <section class="screen quiz-screen">
+    <h2 class="screen-title">Quiz Teórico</h2>
+    <div id="quiz-body"></div>
+  </section>
+</template>
+
+<script src="engine.js"></script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
