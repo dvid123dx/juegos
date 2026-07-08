@@ -240,6 +240,57 @@ TPL.pole = (ref, tin, tout) => ({
   },
 });
 
+TPL.limitSwitch = (kind, ref, t1, t2) => ({
+  // interruptor de limite (fin de carrera): mismo contacto NA/NC, con
+  // palanca y rodillo en vez de capuchon de boton
+  w: 34, h: 46,
+  gate: true,
+  btnKind: kind,
+  terminals: { [t1]: { x: 0, y: -23 }, [t2]: { x: 0, y: 23 } },
+  restClosed: kind === "NC",
+  draw(g) {
+    contactGap(g, kind, -23, 23);
+    g.appendChild(svgEl("line", { x1: 0, y1: -2, x2: 14, y2: -14, class: "ls-lever" }));
+    g.appendChild(svgEl("circle", { cx: 16, cy: -16, r: 5, class: "ls-roller btn-pressable" }));
+    g.appendChild(text(18, 12, ref, "sym-ref", "start"));
+  },
+});
+
+TPL.horn = (label) => ({
+  w: 30, h: 42,
+  isLamp: true,
+  terminals: { X1: { x: 0, y: -21 }, X2: { x: 0, y: 21 } },
+  draw(g) {
+    g.appendChild(svgEl("line", { x1: 0, y1: -21, x2: 0, y2: -10, class: "cable-core" }));
+    g.appendChild(svgEl("line", { x1: 0, y1: 10, x2: 0, y2: 21, class: "cable-core" }));
+    g.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 12, class: "horn-body", filter: "url(#fDrop)" }));
+    g.appendChild(svgEl("path", { d: "M-6,4 L-6,-4 L2,-9 L2,9 Z", class: "horn-bell" }));
+    g.appendChild(svgEl("path", { d: "M5,-9 Q12,0 5,9", class: "horn-wave" }));
+    g.appendChild(svgEl("path", { d: "M8,-12 Q18,0 8,12", class: "horn-wave" }));
+    g.appendChild(text(0, 20, label, "lamp-caption"));
+    screwAt(g, 0, -21, 5.5);
+    screwAt(g, 0, 21, 5.5);
+  },
+});
+
+TPL.breaker = (ref, tin, tout) => ({
+  // guardamotor / interruptor termomagnetico manual: gate + manual, con
+  // palanca que se ve verde(cerrado)/rojo(abierto)
+  w: 30, h: 48,
+  gate: true,
+  restClosed: true,
+  terminals: { [tin]: { x: 0, y: -24 }, [tout]: { x: 0, y: 24 } },
+  draw(g) {
+    g.appendChild(svgEl("line", { x1: 0, y1: -24, x2: 0, y2: -16, class: "cable-core" }));
+    g.appendChild(svgEl("line", { x1: 0, y1: 16, x2: 0, y2: 24, class: "cable-core" }));
+    g.appendChild(svgEl("rect", { x: -13, y: -16, width: 26, height: 32, rx: 4, class: "brk-body", filter: "url(#fDrop)" }));
+    g.appendChild(svgEl("rect", { x: -5, y: -10, width: 10, height: 20, rx: 3, class: "brk-lever btn-pressable" }));
+    g.appendChild(text(17, 3, ref, "sym-ref", "start"));
+    screwAt(g, 0, -24);
+    screwAt(g, 0, 24);
+  },
+});
+
 TPL.rail = (horizontal, len, label) => ({
   w: horizontal ? len : 4,
   h: horizontal ? 4 : len,
@@ -286,6 +337,14 @@ TPL.motor = (leadsOnly3) => {
       g.appendChild(svgEl("circle", { cx: 0, cy: -10, r: 22, class: "motor-face" }));
       g.appendChild(text(0, -6, "M", "sym-motor"));
       g.appendChild(text(0, 10, "3~", "sym-label-small"));
+      const fanWrap = svgEl("g", { class: "motor-fan-wrap", transform: "translate(0,-10)" });
+      const fan = svgEl("g", { class: "motor-fan" });
+      for (let i = 0; i < 3; i++) {
+        fan.appendChild(svgEl("path", { d: "M0,0 L6,-18 Q0,-23 -6,-18 Z", transform: `rotate(${i * 120})`, class: "motor-blade" }));
+      }
+      fan.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 4.5, class: "motor-hub" }));
+      fanWrap.appendChild(fan);
+      g.appendChild(fanWrap);
       g.appendChild(svgEl("line", { x1: -30, y1: 24, x2: -30, y2: topY - 9, class: "cable-core" }));
       g.appendChild(svgEl("line", { x1: 0, y1: 24, x2: 0, y2: topY - 9, class: "cable-core" }));
       g.appendChild(svgEl("line", { x1: 30, y1: 24, x2: 30, y2: topY - 9, class: "cable-core" }));
@@ -345,33 +404,9 @@ class Diagram {
     this.svg.appendChild(this.gTerm);
 
     this.compGroups = new Map();
+    this.compLabelEls = new Map();
     for (const comp of this.exercise.components) {
-      const tpl = comp.tpl;
-      const cls = "component" + (tpl.restClosed ? " closed" : "");
-      const g = svgEl("g", { transform: `translate(${comp.x},${comp.y})`, class: cls, "data-id": comp.id });
-      tpl.draw(g);
-      this.gComp.appendChild(g);
-      this.compGroups.set(comp.id, g);
-
-      if (comp.label) {
-        this.gComp.appendChild(text(comp.x, comp.y - (tpl.h / 2) - 8, comp.label, "comp-label"));
-      }
-
-      if (tpl.isRail) {
-        const pts = comp.taps || this._autoTaps(tpl);
-        for (const tp of pts) {
-          const id = comp.id; // all taps share the same net id
-          const abs = { x: comp.x + tp.dx, y: comp.y + tp.dy };
-          this._registerTerminal(id + "@" + tp.dx + "," + tp.dy, abs, comp.id, true);
-        }
-      } else {
-        for (const name in tpl.terminals) {
-          const rel = tpl.terminals[name];
-          const abs = { x: comp.x + rel.x, y: comp.y + rel.y };
-          const id = comp.id + "." + name;
-          this._registerTerminal(id, abs, comp.id, false);
-        }
-      }
+      this._registerComponentVisual(comp);
     }
 
     // pre-union every point that belongs to the same rail id
@@ -394,11 +429,7 @@ class Diagram {
 
     for (const [id, info] of this.termPos) {
       if (info.isAliasOnly) continue;
-      const c = svgEl("circle", {
-        cx: info.x, cy: info.y, r: 10, class: "terminal", "data-term": id,
-      });
-      c.addEventListener("click", (e) => this._onTerminalClick(id, e));
-      this.gTerm.appendChild(c);
+      this._drawTerminalCircle(id, info);
     }
 
     if (this.exercise.staticWires) {
@@ -422,24 +453,144 @@ class Diagram {
     this.termPos.set(id, { x: abs.x, y: abs.y, railId: isRail ? railId : null });
   }
 
+  _registerComponentVisual(comp) {
+    const tpl = comp.tpl;
+    const cls = "component" + (tpl.restClosed ? " closed" : "");
+    const g = svgEl("g", { transform: `translate(${comp.x},${comp.y})`, class: cls, "data-id": comp.id });
+    tpl.draw(g);
+    this.gComp.appendChild(g);
+    this.compGroups.set(comp.id, g);
+
+    if (this.opts.selectable) {
+      g.addEventListener("click", (e) => {
+        if (this.pending) return; // mid-wire, let the terminal click win
+        e.stopPropagation();
+        this.selectComponent(comp.id);
+      });
+    }
+
+    if (comp.label) {
+      const lbl = text(comp.x, comp.y - (tpl.h / 2) - 8, comp.label, "comp-label");
+      this.gComp.appendChild(lbl);
+      this.compLabelEls.set(comp.id, lbl);
+    }
+
+    if (tpl.isRail) {
+      const pts = comp.taps || this._autoTaps(tpl);
+      for (const tp of pts) {
+        const id = comp.id; // all taps share the same net id
+        const abs = { x: comp.x + tp.dx, y: comp.y + tp.dy };
+        this._registerTerminal(id + "@" + tp.dx + "," + tp.dy, abs, comp.id, true);
+      }
+    } else {
+      for (const name in tpl.terminals) {
+        const rel = tpl.terminals[name];
+        const abs = { x: comp.x + rel.x, y: comp.y + rel.y };
+        const id = comp.id + "." + name;
+        this._registerTerminal(id, abs, comp.id, false);
+      }
+    }
+  }
+
+  _drawTerminalCircle(id, info) {
+    const c = svgEl("circle", { cx: info.x, cy: info.y, r: 10, class: "terminal", "data-term": id });
+    c.addEventListener("click", (e) => this._onTerminalClick(id, e));
+    this.gTerm.appendChild(c);
+    return c;
+  }
+
+  /* ---------------- modo libre: agregar/quitar piezas en vivo ---------------- */
+
+  addComponent(comp) {
+    this.exercise.components.push(comp);
+    this._registerComponentVisual(comp);
+    for (const name in comp.tpl.terminals) {
+      const id = comp.id + "." + name;
+      this._drawTerminalCircle(id, this.termPos.get(id));
+    }
+    if (comp.manual || comp.toggle) this._bindOneManualControl(comp);
+    this.solve();
+    return comp;
+  }
+
+  removeComponent(id) {
+    const g = this.compGroups.get(id);
+    if (!g) return;
+    const prefix = id + ".";
+    for (const w of [...this.wires]) {
+      if (w.a.startsWith(prefix) || w.b.startsWith(prefix)) this._removeWire(w);
+    }
+    for (const [tid] of [...this.termPos]) {
+      if (tid.startsWith(prefix)) {
+        this.termPos.delete(tid);
+        const c = this.gTerm.querySelector(`[data-term="${CSS.escape(tid)}"]`);
+        if (c) c.remove();
+      }
+    }
+    g.remove();
+    this.compGroups.delete(id);
+    const lbl = this.compLabelEls.get(id);
+    if (lbl) { lbl.remove(); this.compLabelEls.delete(id); }
+    this.exercise.components = this.exercise.components.filter((c) => c.id !== id);
+    if (this.selectedId === id) this.selectedId = null;
+    this.solve();
+  }
+
+  selectComponent(id) {
+    if (this.selectedId) {
+      const prev = this.compGroups.get(this.selectedId);
+      if (prev) prev.classList.remove("selected");
+    }
+    this.selectedId = this.selectedId === id ? null : id;
+    if (this.selectedId) {
+      const g = this.compGroups.get(this.selectedId);
+      if (g) g.classList.add("selected");
+    }
+    if (this.opts.onSelect) this.opts.onSelect(this.selectedId);
+  }
+
+  removeSelected() {
+    if (!this.selectedId) return false;
+    this.removeComponent(this.selectedId);
+    return true;
+  }
+
+  toSvgPoint(clientX, clientY) {
+    const pt = this.svg.createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    const ctm = this.svg.getScreenCTM();
+    if (!ctm) return { x: 0, y: 0 };
+    const local = pt.matrixTransform(ctm.inverse());
+    return { x: local.x, y: local.y };
+  }
+
   /* ---------------- tiempo real: presionar botones y ver la corriente ---------------- */
 
   _bindManualControls() {
     if (!this.exercise.source) return;
     for (const comp of this.exercise.components) {
-      if (!comp.manual) continue;
-      const g = this.compGroups.get(comp.id);
-      const dome = g.querySelector(".btn-pressable");
-      if (!dome) continue;
-      const press = (e) => { e.preventDefault(); this.pressManual(comp.id, true); };
-      const release = (e) => { e.preventDefault(); this.pressManual(comp.id, false); };
-      dome.addEventListener("mousedown", press);
-      dome.addEventListener("touchstart", press, { passive: false });
-      window.addEventListener("mouseup", release);
-      dome.addEventListener("touchend", release);
-      dome.addEventListener("touchcancel", release);
-      dome.classList.add("pressable-hit");
+      if (!comp.manual && !comp.toggle) continue;
+      this._bindOneManualControl(comp);
     }
+  }
+
+  _bindOneManualControl(comp) {
+    const g = this.compGroups.get(comp.id);
+    const dome = g && g.querySelector(".btn-pressable");
+    if (!dome) return;
+    dome.classList.add("pressable-hit");
+    if (comp.toggle) {
+      dome.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); this.toggleManual(comp.id); });
+      return;
+    }
+    const press = (e) => { e.preventDefault(); this.pressManual(comp.id, true); };
+    const release = (e) => { e.preventDefault(); this.pressManual(comp.id, false); };
+    dome.addEventListener("mousedown", press);
+    dome.addEventListener("touchstart", press, { passive: false });
+    window.addEventListener("mouseup", release);
+    dome.addEventListener("touchend", release);
+    dome.addEventListener("touchcancel", release);
   }
 
   // manually actuate a pushbutton: pressed=true means the physical button is
@@ -453,6 +604,15 @@ class Diagram {
     const wantClosed = pressed ? !restClosed : restClosed;
     g.classList.toggle("closed", wantClosed);
     g.classList.toggle("pressed", pressed);
+    this.solve();
+  }
+
+  // latching switch (breaker/disconnect): each click flips it and stays,
+  // unlike a spring-return pushbutton.
+  toggleManual(compId) {
+    const g = this.compGroups.get(compId);
+    if (!g) return;
+    g.classList.toggle("closed");
     this.solve();
   }
 
@@ -616,14 +776,24 @@ class Diagram {
     const shadow = svgEl("path", { d, class: "cable-shadow", fill: "none", transform: "translate(1.5,2.5)" });
     const core = svgEl("path", { d, class: "cable-tube", fill: "none" });
     const hi = svgEl("path", { d, class: "cable-hi", fill: "none" });
+    const ferruleA = svgEl("circle", { cx: pa.x, cy: pa.y, r: 4.2, class: "cable-ferrule" });
+    const ferruleB = svgEl("circle", { cx: pb.x, cy: pb.y, r: 4.2, class: "cable-ferrule" });
     const hit = svgEl("path", { d, class: "cable-hit", fill: "none" });
     group.appendChild(shadow);
     group.appendChild(core);
     group.appendChild(hi);
+    group.appendChild(ferruleA);
+    group.appendChild(ferruleB);
     group.appendChild(hit);
     if (!isStatic) {
       hit.addEventListener("click", (e) => {
         if (this.opts.readonly) return;
+        e.stopPropagation();
+        this._removeWire(wireObj);
+      });
+      hit.addEventListener("contextmenu", (e) => {
+        if (this.opts.readonly) return;
+        e.preventDefault();
         e.stopPropagation();
         this._removeWire(wireObj);
       });
@@ -640,6 +810,13 @@ class Diagram {
     this._rebuildUnionFromWires();
     this.solve();
     this.onChange();
+  }
+
+  // quick undo: remove the most recently placed wire
+  undoLastWire() {
+    if (!this.wires.length) return false;
+    this._removeWire(this.wires[this.wires.length - 1]);
+    return true;
   }
 
   _rebuildUnionFromWires() {
@@ -713,7 +890,10 @@ class Diagram {
 
   setRunning(id, on) {
     const g = this.compGroups.get(id);
-    if (g) g.classList.toggle("running", on);
+    if (!g) return;
+    g.classList.toggle("running", !!on);
+    g.classList.toggle("speed-low", on === "low");
+    g.classList.toggle("speed-high", on === "high");
   }
 
   isEnergized(id) {

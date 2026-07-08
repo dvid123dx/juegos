@@ -19,6 +19,8 @@ const GROUP_LABELS = {
   reversa: "Inversión de Giro",
   "estrella-delta": "Estrella-Triángulo",
   autotransformador: "Autotransformador",
+  "dos-velocidades": "Motor de Dos Velocidades (Dahlander)",
+  alarma: "Alarma y Sensores",
 };
 
 function clearApp() {
@@ -44,6 +46,7 @@ function goMenu() {
       else if (nav === "challenges") goChallenges();
       else if (nav === "planos") goPlanos();
       else if (nav === "quiz") goQuiz();
+      else if (nav === "free") goFree();
     });
   });
 }
@@ -86,6 +89,12 @@ function faceHTML(face) {
       return `<div class="f-body f-motor"><div class="f-motorbody"><span>M</span><span class="f-tilde">3~</span></div><div class="f-tbox">U1 V1 W1<br>W2 U2 V2</div></div>`;
     case "fusible":
       return `<div class="f-body f-fuse"><div class="f-fusetube"></div></div>`;
+    case "limitswitch":
+      return `<div class="f-body f-limitswitch"><div class="f-ls-body"><div class="f-ls-lever"></div><div class="f-ls-roller"></div></div></div>`;
+    case "bocina":
+      return `<div class="f-body f-bocina"><div class="f-horn-bell"></div><div class="f-horn-wave"></div><div class="f-horn-wave f-horn-wave2"></div></div>`;
+    case "rele-auxiliar":
+      return `<div class="f-body f-relay"><div class="f-coilblock"><span>A1</span><span>A2</span></div><div class="f-poles f-poles-small"><div class="f-pole"></div><div class="f-pole"></div></div><div class="f-termrow">13/14 21/22</div></div>`;
     default:
       return `<div class="f-body"></div>`;
   }
@@ -458,6 +467,129 @@ function goQuiz() {
     });
   }
   renderQ();
+}
+
+/* ---------------- Modo libre ---------------- */
+
+const FREE_PALETTE = [
+  { key: "coil", label: "Bobina (contactor/relé)", make: (n) => ({ prefix: "K", tpl: () => TPL.coil("K" + n, "bobina") }) },
+  { key: "btnNO", label: "Botón NA (marcha)", make: (n) => ({ prefix: "S", tpl: () => TPL.button("NO", "3-4", "3", "4"), manual: true }) },
+  { key: "btnNC", label: "Botón NC (paro)", make: (n) => ({ prefix: "S", tpl: () => TPL.button("NC", "1-2", "1", "2"), manual: true }) },
+  { key: "contNO", label: "Contacto auxiliar NA", make: (n) => ({ prefix: "C", tpl: () => TPL.contact("NO", "13-14", "13", "14") }) },
+  { key: "contNC", label: "Contacto auxiliar NC", make: (n) => ({ prefix: "C", tpl: () => TPL.contact("NC", "21-22", "21", "22") }) },
+  { key: "lampG", label: "Lámpara verde", make: (n) => ({ prefix: "H", tpl: () => TPL.lamp("H" + n, "green") }) },
+  { key: "lampR", label: "Lámpara roja", make: (n) => ({ prefix: "H", tpl: () => TPL.lamp("H" + n, "red") }) },
+  { key: "horn", label: "Bocina", make: (n) => ({ prefix: "H", tpl: () => TPL.horn("H" + n) }) },
+  { key: "ls", label: "Interruptor de límite", make: (n) => ({ prefix: "LS", tpl: () => TPL.limitSwitch("NO", "3-4", "3", "4"), manual: true }) },
+  { key: "brk", label: "Guardamotor (interruptor)", make: (n) => ({ prefix: "Q", tpl: () => TPL.breaker("Q" + n, "1", "2"), toggle: true }) },
+];
+
+function goFree() {
+  crumb.textContent = "Modo Libre";
+  useTemplate("tpl-free");
+  const svg = document.getElementById("free-svg");
+  const statusEl = document.getElementById("free-status");
+  const paletteEl = document.getElementById("free-palette");
+  const inspectorEl = document.getElementById("free-inspector");
+  const counters = {};
+  let armedType = null;
+
+  function freshExercise() {
+    return {
+      id: "free",
+      vb: [900, 600],
+      source: ["freeL"],
+      return: ["freeN"],
+      components: [
+        railComp("freeL", true, 760, "L", 460, 50),
+        railComp("freeN", true, 760, "N", 460, 550),
+      ],
+      nets: [],
+    };
+  }
+
+  let diagram = new Diagram(svg, freshExercise(), {
+    selectable: true,
+    onChange: () => { statusEl.textContent = `Cables colocados: ${diagram.wireCount()}`; },
+    onSelect: (id) => renderInspector(id),
+  });
+
+  paletteEl.innerHTML = "";
+  for (const item of FREE_PALETTE) {
+    const b = document.createElement("button");
+    b.className = "palette-btn";
+    b.textContent = item.label;
+    b.addEventListener("click", () => {
+      armedType = item.key;
+      paletteEl.querySelectorAll(".palette-btn").forEach((el) => el.classList.remove("armed"));
+      b.classList.add("armed");
+      statusEl.textContent = `Haz clic en el lienzo para colocar: ${item.label}`;
+    });
+    paletteEl.appendChild(b);
+  }
+
+  svg.addEventListener("click", (e) => {
+    if (!armedType || e.target !== svg) return;
+    const item = FREE_PALETTE.find((p) => p.key === armedType);
+    counters[item.key] = (counters[item.key] || 0) + 1;
+    const spec = item.make(counters[item.key]);
+    const id = spec.prefix + counters[item.key];
+    const pt = diagram.toSvgPoint(e.clientX, e.clientY);
+    const comp = { id, label: id, tpl: spec.tpl(), x: pt.x, y: pt.y };
+    if (spec.manual) comp.manual = true;
+    if (spec.toggle) comp.toggle = true;
+    diagram.addComponent(comp);
+    statusEl.textContent = `${id} colocado. Sigue colocando piezas o conecta terminales.`;
+  });
+
+  function renderInspector(id) {
+    if (!id) { inspectorEl.innerHTML = ""; return; }
+    const comp = diagram.exercise.components.find((c) => c.id === id);
+    if (!comp) { inspectorEl.innerHTML = ""; return; }
+    let html = `<div class="inspector-title">${comp.label}</div>`;
+    if (comp.tpl.gate && !comp.manual && !comp.toggle) {
+      const coils = diagram.exercise.components.filter((c) => c.tpl.isCoil);
+      html += `<label class="inspector-label">Vincular a bobina:</label>
+        <select id="inspector-link">
+          <option value="">— sin vincular (fijo) —</option>
+          ${coils.map((c) => `<option value="${c.id}" ${comp.derivedFrom === c.id ? "selected" : ""}>${c.label}</option>`).join("")}
+        </select>
+        <p class="inspector-hint">El contacto ${comp.tpl.restClosed ? "abrirá" : "cerrará"} cuando esa bobina se energice.</p>`;
+    } else if (comp.manual) {
+      html += `<p class="inspector-hint">Botón/sensor manual: mantenlo presionado directamente en el lienzo.</p>`;
+    } else if (comp.toggle) {
+      html += `<p class="inspector-hint">Interruptor de enclavamiento: un clic lo deja fijo en su nueva posición.</p>`;
+    } else if (comp.tpl.isCoil) {
+      html += `<p class="inspector-hint">Bobina: se energiza cuando su A1 y A2 quedan conectados a L y N por un camino cerrado.</p>`;
+    } else if (comp.tpl.isLamp) {
+      html += `<p class="inspector-hint">Carga (lámpara/bocina): se activa cuando queda conectada entre L y N.</p>`;
+    }
+    inspectorEl.innerHTML = html;
+    const sel = document.getElementById("inspector-link");
+    if (sel) {
+      sel.addEventListener("change", () => {
+        comp.derivedFrom = sel.value || undefined;
+        diagram.solve();
+      });
+    }
+  }
+
+  document.getElementById("free-undo-wire").addEventListener("click", () => {
+    if (!diagram.undoLastWire()) statusEl.textContent = "No hay cables que deshacer.";
+  });
+  document.getElementById("free-delete").addEventListener("click", () => {
+    if (!diagram.removeSelected()) statusEl.textContent = "Selecciona primero una pieza haciendo clic sobre ella.";
+    else { inspectorEl.innerHTML = ""; statusEl.textContent = "Pieza eliminada."; }
+  });
+  document.getElementById("free-clear").addEventListener("click", () => {
+    diagram = new Diagram(svg, freshExercise(), {
+      selectable: true,
+      onChange: () => { statusEl.textContent = `Cables colocados: ${diagram.wireCount()}`; },
+      onSelect: (id) => renderInspector(id),
+    });
+    inspectorEl.innerHTML = "";
+    statusEl.textContent = "Lienzo reiniciado — solo quedan los rieles L y N.";
+  });
 }
 
 goMenu();

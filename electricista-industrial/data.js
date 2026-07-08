@@ -439,7 +439,193 @@ const autoPower = {
   ],
 };
 
-const EXERCISES = [dolControl, dolPower, revControl, ydControl, ydPower, autoControl, autoPower];
+/* =========================================================
+   EJERCICIO 8: Motor de Dos Velocidades (Dahlander) — CONTROL
+   ========================================================= */
+
+const twoSpeedControl = {
+  id: "2speed-control",
+  group: "dos-velocidades",
+  kind: "control",
+  title: "Motor de Dos Velocidades (Dahlander) — Circuito de Control",
+  brief: "Cablea S1 (baja velocidad) y S2 (alta velocidad), cada uno con su sello, y el enclavamiento eléctrico cruzado entre KM1 (baja) y KM3+KM2 (alta) para que nunca cierren juntos.",
+  vb: [700, 620],
+  source: ["railL"],
+  return: ["railN"],
+  components: [
+    railComp("railL", true, 560, "L", 360, 50),
+    railComp("railN", true, 560, "N", 360, 570),
+    C("F2", "F2 térmico", TPL.contact("NC", "95-96", "95", "96"), 260, 110),
+    C("S0", "S0 Paro", TPL.button("NC", "1-2", "1", "2"), 260, 180, { manual: true }),
+    C("S1", "S1 Baja vel.", TPL.button("NO", "3-4", "3", "4"), 180, 260, { manual: true }),
+    C("KM1aux1", "KM1 (sello)", TPL.contact("NO", "13-14", "13", "14"), 300, 260, { derivedFrom: "KM1coil" }),
+    C("KM3aux_i", "KM3 (enclav.)", TPL.contact("NC", "21-22", "21", "22"), 380, 260, { derivedFrom: "KM3coil" }),
+    C("KM1coil", "KM1", TPL.coil("KM1", "baja vel."), 300, 350),
+    C("S2", "S2 Alta vel.", TPL.button("NO", "3-4", "3", "4"), 460, 260, { manual: true }),
+    C("KM3aux1", "KM3 (sello)", TPL.contact("NO", "13-14", "13", "14"), 540, 260, { derivedFrom: "KM3coil" }),
+    C("KM1aux_i", "KM1 (enclav.)", TPL.contact("NC", "21-22", "21", "22"), 460, 180, { derivedFrom: "KM1coil" }),
+    C("KM3coil", "KM3", TPL.coil("KM3", "alta vel."), 480, 440),
+    C("KM2coil", "KM2", TPL.coil("KM2", "puente alta"), 600, 440),
+  ],
+  nets: [
+    ["railL", "F2.95"],
+    ["F2.96", "S0.1"],
+    ["S0.2", "S1.3", "KM1aux1.13", "S2.3", "KM3aux1.13"],
+    ["S1.4", "KM1aux1.14", "KM3aux_i.21"],
+    ["KM3aux_i.22", "KM1coil.A1"],
+    ["S2.4", "KM3aux1.14", "KM1aux_i.21"],
+    ["KM1aux_i.22", "KM3coil.A1", "KM2coil.A1"],
+    ["railN", "KM1coil.A2", "KM3coil.A2", "KM2coil.A2"],
+  ],
+  simulation: [
+    logStep("Presionas S1 (baja velocidad)..."),
+    actStep((d) => {
+      d.setClosed("S1", true);
+      d.setEnergized("KM1coil", true);
+      d.setClosed("KM1aux1", true);
+      d.setClosed("KM1aux_i", false);
+    }, "KM1 se energiza y abre su enclavamiento — la alta velocidad queda bloqueada.", 900),
+    actStep((d) => { d.setClosed("S1", false); }, "Motor gira en BAJA velocidad (polos en paralelo estrella).", 900),
+    logStep("Presionas S0 (paro) y luego S2 (alta velocidad)..."),
+    actStep((d) => {
+      d.setEnergized("KM1coil", false);
+      d.setClosed("KM1aux1", false);
+      d.setClosed("KM1aux_i", true);
+      d.setClosed("S2", true);
+    }, "KM1 libera su enclavamiento.", 900),
+    actStep((d) => {
+      d.setEnergized("KM3coil", true);
+      d.setEnergized("KM2coil", true);
+      d.setClosed("KM3aux1", true);
+      d.setClosed("KM3aux_i", false);
+      d.setClosed("S2", false);
+    }, "KM3 + KM2 se energizan juntos — motor conmuta a ALTA velocidad (doble estrella).", 900),
+  ],
+};
+
+/* =========================================================
+   EJERCICIO 9: Motor de Dos Velocidades (Dahlander) — FUERZA
+   ========================================================= */
+
+const twoSpeedPower = {
+  id: "2speed-power",
+  group: "dos-velocidades",
+  kind: "fuerza",
+  title: "Motor de Dos Velocidades (Dahlander) — Circuito de Fuerza",
+  brief: "Con KM1 alimenta U1-V1-W1 (baja velocidad). Con KM3 alimenta U2-V2-W2 (alta velocidad) mientras KM2 puentea U1-V1-W1 entre sí (doble estrella). Cada velocidad tiene su propio relé térmico, calibrado a su corriente nominal.",
+  vb: [780, 700],
+  components: [
+    railComp("railL1", true, 620, "L1", 400, 50),
+    railComp("railL2", true, 620, "L2", 400, 90),
+    railComp("railL3", true, 620, "L3", 400, 130),
+    C("KM1a", "KM1", TPL.pole("1-2", "1", "2"), 220, 210),
+    C("KM1b", "KM1", TPL.pole("3-4", "3", "4"), 340, 210),
+    C("KM1c", "KM1", TPL.pole("5-6", "5", "6"), 460, 210),
+    C("KM3a", "KM3", TPL.pole("1-2", "1", "2"), 560, 210),
+    C("KM3b", "KM3", TPL.pole("3-4", "3", "4"), 660, 210),
+    C("KM3c", "KM3", TPL.pole("5-6", "5", "6"), 760, 210),
+    C("F2a", "F2 (baja)", TPL.pole("1-2", "1", "2"), 220, 300),
+    C("F2b", "F2 (baja)", TPL.pole("3-4", "3", "4"), 340, 300),
+    C("F2c", "F2 (baja)", TPL.pole("5-6", "5", "6"), 460, 300),
+    C("F2xa", "F2 (alta)", TPL.pole("1-2", "1", "2"), 560, 300),
+    C("F2xb", "F2 (alta)", TPL.pole("3-4", "3", "4"), 660, 300),
+    C("F2xc", "F2 (alta)", TPL.pole("5-6", "5", "6"), 760, 300),
+    C("M", "Motor (6 terminales)", TPL.motor(false), 460, 430),
+    C("KM2a", "KM2", TPL.pole("U1", "in1", "out1"), 220, 570),
+    C("KM2b", "KM2", TPL.pole("V1", "in2", "out2"), 320, 570),
+    C("KM2c", "KM2", TPL.pole("W1", "in3", "out3"), 420, 570),
+  ],
+  nets: [
+    ["railL1", "KM1a.1", "KM3a.1"],
+    ["railL2", "KM1b.3", "KM3b.3"],
+    ["railL3", "KM1c.5", "KM3c.5"],
+    ["KM1a.2", "F2a.1"],
+    ["KM1b.4", "F2b.3"],
+    ["KM1c.6", "F2c.5"],
+    ["F2a.2", "M.U1", "KM2a.in1"],
+    ["F2b.4", "M.V1", "KM2b.in2"],
+    ["F2c.6", "M.W1", "KM2c.in3"],
+    ["KM2a.out1", "KM2b.out2", "KM2c.out3"],
+    ["KM3a.2", "F2xa.1"],
+    ["KM3b.4", "F2xb.3"],
+    ["KM3c.6", "F2xc.5"],
+    ["F2xa.2", "M.U2"],
+    ["F2xb.4", "M.V2"],
+    ["F2xc.6", "M.W2"],
+  ],
+  simulation: [
+    logStep("KM1 energizado (baja velocidad, ver control)..."),
+    actStep((d) => { d.setClosed("KM1a", true); d.setClosed("KM1b", true); d.setClosed("KM1c", true); d.setRunning("M", "low"); }, "KM1 conecta L1-L2-L3 a U1-V1-W1: motor en baja velocidad.", 1000),
+    logStep("Presionas S0, luego S2 (alta velocidad)..."),
+    actStep((d) => { d.setClosed("KM1a", false); d.setClosed("KM1b", false); d.setClosed("KM1c", false); }, "KM1 abre.", 700),
+    actStep((d) => { d.setClosed("KM3a", true); d.setClosed("KM3b", true); d.setClosed("KM3c", true); }, "KM3 conecta L1-L2-L3 a U2-V2-W2.", 800),
+    actStep((d) => { d.setClosed("KM2a", true); d.setClosed("KM2b", true); d.setClosed("KM2c", true); d.setRunning("M", "high"); }, "KM2 puentea U1-V1-W1 (doble estrella): motor en ALTA velocidad.", 1000),
+  ],
+};
+
+/* =========================================================
+   EJERCICIO 10: Alarma con Sensor de Límite — CONTROL
+   ========================================================= */
+
+const alarmControl = {
+  id: "alarm-control",
+  group: "alarma",
+  kind: "control",
+  title: "Alarma con Sensor de Límite — Circuito de Control",
+  brief: "Cablea el guardamotor Q1 (interruptor manual), el sensor de límite LS1 que dispara la alarma con sello a través del relé auxiliar CR, la bocina H1 y el piloto H2 ('sistema listo'). Q1 es un interruptor de verdad: ábrelo para cortar toda la alimentación.",
+  vb: [640, 560],
+  source: ["railL"],
+  return: ["railN"],
+  components: [
+    railComp("railL", true, 500, "L", 340, 60),
+    railComp("railN", true, 500, "N", 340, 500),
+    C("Q1", "Q1 guardamotor", TPL.breaker("Q1", "1", "2"), 220, 130, { toggle: true }),
+    C("S0", "S0 Reset", TPL.button("NC", "1-2", "1", "2"), 220, 210, { manual: true }),
+    C("LS1", "LS1 sensor", TPL.limitSwitch("NO", "3-4", "3", "4"), 180, 300, { manual: true }),
+    C("CRaux1", "CR (sello)", TPL.contact("NO", "13-14", "13", "14"), 300, 300, { derivedFrom: "CRcoil" }),
+    C("CRcoil", "CR", TPL.coil("CR", "relé aux."), 240, 400),
+    C("CRaux2", "CR", TPL.contact("NO", "23-24", "23", "24"), 420, 150, { derivedFrom: "CRcoil" }),
+    C("H1", "H1 bocina", TPL.horn("ALARMA"), 420, 250),
+    C("CRaux3", "CR", TPL.contact("NC", "31-32", "31", "32"), 520, 150, { derivedFrom: "CRcoil" }),
+    C("H2", "H2 listo", TPL.lamp("H2", "green"), 520, 250),
+  ],
+  nets: [
+    ["railL", "Q1.1"],
+    ["Q1.2", "S0.1", "CRaux2.23", "CRaux3.31"],
+    ["S0.2", "LS1.3", "CRaux1.13"],
+    ["LS1.4", "CRaux1.14", "CRcoil.A1"],
+    ["railN", "CRcoil.A2", "H1.X2", "H2.X2"],
+    ["CRaux2.24", "H1.X1"],
+    ["CRaux3.32", "H2.X1"],
+  ],
+  simulation: [
+    logStep("Un objeto activa el sensor LS1..."),
+    actStep((d) => { d.setClosed("LS1", true); }, null, 500),
+    actStep((d) => {
+      d.setEnergized("CRcoil", true);
+      d.setClosed("CRaux1", true);
+      d.setClosed("CRaux2", true);
+      d.setClosed("CRaux3", false);
+      d.setEnergized("H1", true);
+      d.setEnergized("H2", false);
+    }, "CR se energiza y se sella — suena la bocina H1.", 1000),
+    actStep((d) => { d.setClosed("LS1", false); }, "El objeto ya pasó (LS1 se libera) pero la alarma se mantiene sellada.", 900),
+    logStep("Presionas S0 para reconocer y silenciar la alarma..."),
+    actStep((d) => {
+      d.setEnergized("CRcoil", false);
+      d.setClosed("CRaux1", false);
+      d.setClosed("CRaux2", false);
+      d.setClosed("CRaux3", true);
+      d.setEnergized("H1", false);
+      d.setEnergized("H2", true);
+    }, "CR se desenergiza — la bocina calla y el piloto verde indica 'listo'.", 1000),
+  ],
+};
+
+const EXERCISES = [
+  dolControl, dolPower, revControl, ydControl, ydPower, autoControl, autoPower,
+  twoSpeedControl, twoSpeedPower, alarmControl,
+];
 
 /* =========================================================
    Explorador de componentes (tarjetas 3D)
@@ -506,6 +692,21 @@ const EXPLORER = [
     desc: "Elemento de protección de un solo uso: se funde para interrumpir el circuito ante una falla, protegiendo cables y componentes aguas abajo.",
     face: "fusible",
   },
+  {
+    id: "limitswitch", name: "Interruptor de Límite (fin de carrera)", tag: "LS1",
+    desc: "Contacto NA/NC accionado mecánicamente por una palanca o rodillo cuando una pieza móvil (puerta, carro, pistón) llega a su posición. Muy usado en bandas transportadoras y máquinas con movimiento lineal.",
+    face: "limitswitch",
+  },
+  {
+    id: "bocina", name: "Bocina / Alarma Sonora", tag: "H1 (bocina)",
+    desc: "Elemento de señalización audible. Se conecta igual que una lámpara piloto (entre L y N a través de un contacto), y suena mientras su bobina de control permanezca energizada.",
+    face: "bocina",
+  },
+  {
+    id: "rele-auxiliar", name: "Relé Auxiliar de Control", tag: "CR",
+    desc: "Igual que un contactor pero sin contactos de potencia: multiplica y aísla señales de control cuando se necesitan más contactos auxiliares de los que trae un contactor, o para separar niveles de tensión.",
+    face: "rele-auxiliar",
+  },
 ];
 
 /* =========================================================
@@ -537,4 +738,8 @@ const QUIZ = [
   { q: "¿Cuál de los siguientes NO es un método de arranque a tensión reducida?", a: ["Estrella-triángulo", "Autotransformador", "Arranque directo (DOL)", "Arrancador suave (soft starter)"], correct: 2 },
   { q: "¿Qué ventaja tiene un arrancador a tensión reducida sobre uno directo?", a: ["Ninguna, siempre es mejor el directo", "Reduce la corriente de arranque y el golpe mecánico/eléctrico sobre la instalación", "Hace girar el motor más rápido", "Elimina la necesidad de protección térmica"], correct: 1 },
   { q: "En el circuito de fuerza del autotransformador, ¿qué contactor queda sin corriente durante la marcha normal (después de la transición)?", a: ["KL", "F2", "KS y KC (el autotransformador queda fuera de servicio)", "Ninguno, todos permanecen activos"], correct: 2 },
+  { q: "En un motor Dahlander (dos velocidades), ¿qué hace el contactor KM2 en alta velocidad?", a: ["Alimenta directamente el devanado de alta", "Puentea entre sí las terminales del devanado de baja velocidad (doble estrella)", "Protege contra sobrecarga", "Selecciona el sentido de giro"], correct: 1 },
+  { q: "¿Por qué un motor de dos velocidades normalmente lleva DOS relés térmicos distintos?", a: ["Por error de diseño", "Porque cada velocidad tiene una corriente nominal distinta y necesita su propio ajuste de protección", "Porque los térmicos se dañan rápido", "No es cierto, siempre se usa uno solo"], correct: 1 },
+  { q: "¿Qué función cumple un interruptor de límite (fin de carrera) en una máquina?", a: ["Mide la temperatura del motor", "Detecta mecánicamente que una pieza móvil llegó a una posición determinada", "Reduce la tensión de arranque", "Sustituye al relé térmico"], correct: 1 },
+  { q: "¿Para qué se usa un relé auxiliar de control (CR) en vez de aprovechar los contactos del propio contactor?", a: ["Para que se vea más complicado el tablero", "Cuando se necesitan más contactos auxiliares de los que trae el contactor, o para aislar niveles de tensión", "Porque los contactores no tienen bobina", "No tiene ninguna utilidad real"], correct: 1 },
 ];

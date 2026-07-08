@@ -45,6 +45,11 @@
         <span class="menu-title">Quiz Teórico</span>
         <span class="menu-desc">Pon a prueba lo aprendido con preguntas de opción múltiple</span>
       </button>
+      <button class="menu-card" data-nav="free">
+        <span class="menu-icon">✎</span>
+        <span class="menu-title">Modo Libre</span>
+        <span class="menu-desc">Arma tu propio circuito de control desde cero, con cualquier componente, y córrelo en vivo</span>
+      </button>
     </div>
   </section>
 </template>
@@ -118,6 +123,28 @@
   <section class="screen quiz-screen">
     <h2 class="screen-title">Quiz Teórico</h2>
     <div id="quiz-body"></div>
+  </section>
+</template>
+
+<template id="tpl-free">
+  <section class="screen free-screen">
+    <h2 class="screen-title">Modo Libre</h2>
+    <p class="screen-sub">Arma tu propio circuito de control: elige una pieza de la paleta, haz clic en el lienzo para colocarla, y conecta terminales como en los retos. El riel L (arriba) y N (abajo) ya están puestos.</p>
+    <div class="wiring-layout">
+      <div class="wiring-canvas-wrap">
+        <svg id="free-svg" class="wiring-svg free-svg"></svg>
+      </div>
+      <div class="wiring-side">
+        <div class="free-palette" id="free-palette"></div>
+        <div class="wiring-status" id="free-status">Elige una pieza y haz clic en el lienzo para colocarla.</div>
+        <div class="free-inspector" id="free-inspector"></div>
+        <div class="wiring-actions">
+          <button id="free-undo-wire" class="btn">↺ Deshacer cable</button>
+          <button id="free-delete" class="btn btn-danger">✕ Eliminar seleccionado</button>
+          <button id="free-clear" class="btn btn-danger">Borrar todo</button>
+        </div>
+      </div>
+    </div>
   </section>
 </template>
 
