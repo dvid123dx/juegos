@@ -282,6 +282,18 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .component.running .motor-face { stroke-dasharray: 5 5; animation: dash 0.8s linear infinite; }
 @keyframes dash { to { stroke-dashoffset: -20; } }
 
+/* corriente fluyendo en tiempo real por un cable energizado */
+.wire-group.live .cable-tube { stroke: #7dffb0; stroke-dasharray: 9 7; animation: flow 0.5s linear infinite; filter: drop-shadow(0 0 4px #35e07a); }
+.wire-group.live .cable-hi { opacity: 0; }
+@keyframes flow { to { stroke-dashoffset: -16; } }
+
+/* boton fisicamente presionado */
+.component.pressed .btn-dome { transform: translateY(2.5px) scale(0.9); filter: brightness(0.75); }
+.component.pressed .bezel-ring { filter: brightness(0.85); }
+.btn-dome { transition: transform 0.08s ease-out, filter 0.08s ease-out; transform-box: fill-box; transform-origin: center; }
+.pressable-hit { cursor: pointer; }
+.pressable-hit:hover { filter: brightness(1.15); }
+
 /* ---------------- planos ---------------- */
 
 .planos-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
@@ -310,6 +322,78 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .quiz-result { text-align: center; padding: 40px 0; }
 .quiz-result h3 { font-size: 26px; margin-bottom: 12px; color: var(--accent); }
 .quiz-result p { color: var(--ink-dim); margin-bottom: 20px; }
+
+/* ---------------- panel de operacion 3D ---------------- */
+
+.panel3d-section { margin-top: 22px; }
+.panel3d-section.hidden { display: none; }
+.panel3d-title { font-size: 16px; margin-bottom: 12px; }
+.panel3d-title span { color: var(--ink-dim); font-weight: 400; font-size: 13px; }
+
+.panel3d-stage {
+  width: 100%; height: 300px; perspective: 1100px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: grab; touch-action: none;
+  background: radial-gradient(ellipse at center, rgba(53,209,200,0.06), transparent 70%);
+  border: 1px solid var(--line); border-radius: 14px;
+}
+.panel3d-stage:active { cursor: grabbing; }
+
+.panel3d-box {
+  position: relative; width: 420px; height: 190px;
+  transform-style: preserve-3d;
+  background: linear-gradient(160deg, #33425f, #131d31);
+  border: 2px solid #060a14;
+  border-radius: 10px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.6), inset 0 2px 8px rgba(255,255,255,0.08);
+  transition: transform 0.05s linear;
+}
+
+.p3d-item {
+  position: absolute; transform-style: preserve-3d;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+
+.p3d-bezel {
+  width: 54px; height: 54px; border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, #fdfdfd, #9aa4b8 55%, #565f70);
+  box-shadow: 0 6px 10px rgba(0,0,0,0.55);
+  transform: translateZ(6px);
+  display: flex; align-items: center; justify-content: center;
+}
+
+.p3d-dome {
+  width: 38px; height: 38px; border-radius: 50%;
+  transform: translateZ(20px);
+  transition: transform 0.09s ease-out, box-shadow 0.09s ease-out;
+  cursor: pointer;
+  box-shadow: 0 8px 14px rgba(0,0,0,0.5);
+}
+.p3d-dome-green { background: radial-gradient(circle at 32% 25%, #c8ffe0, #1c9a56 55%, #0a4a26); }
+.p3d-dome-red { background: radial-gradient(circle at 32% 25%, #ffd4d0, #c22b2b 55%, #6b0f0a); }
+.p3d-item.pressed .p3d-dome { transform: translateZ(6px); box-shadow: 0 2px 4px rgba(0,0,0,0.5); filter: brightness(0.8); }
+
+.p3d-lamp-housing {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, #e7ecf7, #7f8fae 60%, #333f5c);
+  transform: translateZ(6px);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 10px rgba(0,0,0,0.5);
+}
+.p3d-lamp-glass {
+  width: 26px; height: 26px; border-radius: 50%; transform: translateZ(14px);
+  background: radial-gradient(circle at 32% 25%, #4a5470, #1a2033);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.p3d-lamp-glass.on-green { background: radial-gradient(circle at 32% 25%, #f2fff7, #48ff96 55%, #0a8a42); box-shadow: 0 0 18px 4px rgba(72,255,150,0.75); }
+.p3d-lamp-glass.on-red { background: radial-gradient(circle at 32% 25%, #fff2f0, #ff5b50 55%, #9c0f0a); box-shadow: 0 0 18px 4px rgba(255,91,80,0.75); }
+
+.p3d-caption { transform: translateZ(6px); font-size: 10.5px; font-family: monospace; color: #dbe7ff; text-shadow: 0 1px 2px #000; white-space: nowrap; }
+
+.p3d-nameplate {
+  position: absolute; left: 50%; top: 10px; transform: translate(-50%, 0) translateZ(4px);
+  font-size: 11px; letter-spacing: 2px; color: #7f93b8; font-family: monospace;
+}
 
 @media (max-width: 900px) {
   .wiring-layout { grid-template-columns: 1fr; }

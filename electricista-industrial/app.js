@@ -200,6 +200,90 @@ function goChallenges() {
   }
 }
 
+/* ---------------- Panel de operacion 3D ---------------- */
+
+function buildPanel3D(box, exercise, diagram) {
+  box.innerHTML = "";
+  const buttons = exercise.components.filter((c) => c.manual);
+  const lamps = exercise.components.filter((c) => c.tpl.isLamp);
+  const items = {};
+
+  const nameplate = document.createElement("div");
+  nameplate.className = "p3d-nameplate";
+  nameplate.textContent = exercise.title.split("—")[0].trim().toUpperCase();
+  box.appendChild(nameplate);
+
+  function place(list, y) {
+    const n = list.length;
+    list.forEach((comp, i) => {
+      const x = (420 / (n + 1)) * (i + 1);
+      const el = document.createElement("div");
+      el.className = "p3d-item";
+      el.style.left = x - 27 + "px";
+      el.style.top = y + "px";
+      box.appendChild(el);
+      items[comp.id] = el;
+
+      if (comp.manual) {
+        const kind = comp.tpl.btnKind;
+        el.innerHTML = `<div class="p3d-bezel"><div class="p3d-dome ${kind === "NO" ? "p3d-dome-green" : "p3d-dome-red"}"></div></div><div class="p3d-caption">${comp.label}</div>`;
+        const dome = el.querySelector(".p3d-dome");
+        const press = (e) => {
+          e.preventDefault(); e.stopPropagation();
+          el.classList.add("pressed");
+          diagram.pressManual(comp.id, true);
+        };
+        const release = (e) => {
+          e.preventDefault();
+          el.classList.remove("pressed");
+          diagram.pressManual(comp.id, false);
+        };
+        dome.addEventListener("mousedown", press);
+        dome.addEventListener("touchstart", press, { passive: false });
+        window.addEventListener("mouseup", release);
+        dome.addEventListener("touchend", release);
+        dome.addEventListener("touchcancel", release);
+      } else {
+        el.innerHTML = `<div class="p3d-lamp-housing"><div class="p3d-lamp-glass"></div></div><div class="p3d-caption">${comp.label}</div>`;
+      }
+    });
+  }
+
+  place(buttons, 32);
+  place(lamps, 120);
+
+  function refresh() {
+    for (const comp of lamps) {
+      const el = items[comp.id];
+      if (!el) continue;
+      const glass = el.querySelector(".p3d-lamp-glass");
+      const on = diagram.isEnergized(comp.id);
+      glass.classList.toggle("on-green", on && comp.tpl.lampColor === "green");
+      glass.classList.toggle("on-red", on && comp.tpl.lampColor === "red");
+    }
+  }
+
+  const stage = document.getElementById("panel3d-stage");
+  let rotX = -10, rotY = 18;
+  function applyRot() { box.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`; }
+  applyRot();
+  let dragging = false, lastX = 0, lastY = 0;
+  stage.addEventListener("pointerdown", (e) => { dragging = true; lastX = e.clientX; lastY = e.clientY; stage.setPointerCapture(e.pointerId); });
+  stage.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    rotY += (e.clientX - lastX) * 0.4;
+    rotX -= (e.clientY - lastY) * 0.4;
+    rotX = Math.max(-70, Math.min(70, rotX));
+    lastX = e.clientX; lastY = e.clientY;
+    applyRot();
+  });
+  stage.addEventListener("pointerup", () => { dragging = false; });
+  stage.addEventListener("pointerleave", () => { dragging = false; });
+
+  refresh();
+  return { refresh };
+}
+
 /* ---------------- Pantalla de cableado ---------------- */
 
 function goWiring(exId) {
@@ -217,13 +301,27 @@ function goWiring(exId) {
   const btnSim = document.getElementById("btn-simulate");
 
   let solvedOnce = false;
+  let panel3d = null;
+  const panelSection = document.getElementById("panel3d-section");
 
   const diagram = new Diagram(svg, exercise, {
     onChange: () => {
       statusEl.textContent = `Cables colocados: ${diagram.wireCount()}`;
       statusEl.className = "wiring-status";
     },
+    onSolve: () => refreshPanel3D(),
   });
+
+  if (exercise.source) {
+    panelSection.classList.remove("hidden");
+    panel3d = buildPanel3D(document.getElementById("panel3d-box"), exercise, diagram);
+  } else {
+    panelSection.classList.add("hidden");
+  }
+
+  function refreshPanel3D() {
+    if (panel3d) panel3d.refresh();
+  }
 
   function log(msg) {
     const p = document.createElement("div");
@@ -237,7 +335,9 @@ function goWiring(exId) {
     const val = diagram.validate();
     diagram.markValidation(val);
     if (val.perfect) {
-      statusEl.textContent = `¡Circuito correcto! (${val.correctNets}/${val.totalNets} nodos)`;
+      statusEl.textContent = exercise.source
+        ? `¡Circuito correcto! (${val.correctNets}/${val.totalNets} nodos) — ya puedes presionar los botones (arriba, en el plano, o en el panel 3D) para operar el circuito en tiempo real.`
+        : `¡Circuito correcto! (${val.correctNets}/${val.totalNets} nodos)`;
       statusEl.className = "wiring-status status-ok";
       btnSim.disabled = false;
       if (!solvedOnce) { addScore(100); solvedOnce = true; }

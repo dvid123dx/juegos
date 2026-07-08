@@ -5,7 +5,7 @@
    y banco de preguntas.
    ========================================================= */
 
-function C(id, label, tpl, x, y) { return { id, label, tpl, x, y }; }
+function C(id, label, tpl, x, y, extra) { return { id, label, tpl, x, y, ...extra }; }
 function railComp(id, horizontal, len, label, x, y, taps) {
   return { id, label: null, tpl: TPL.rail(horizontal, len, label), x, y, taps };
 }
@@ -35,19 +35,21 @@ const dolControl = {
   group: "directo",
   kind: "control",
   title: "Arranque Directo (DOL) — Circuito de Control",
-  brief: "Cablea el clásico circuito de arranque-paro con sello: S0 (paro), S1 (marcha), el contacto de sello 13-14 de K1 y la bobina de K1, protegidos por el contacto térmico 95-96 de F2. Agrega los pilotos H1 (marcha) y H2 (paro).",
+  brief: "Cablea el clásico circuito de arranque-paro con sello: S0 (paro), S1 (marcha), el contacto de sello 13-14 de K1 y la bobina de K1, protegidos por el contacto térmico 95-96 de F2. Agrega los pilotos H1 (marcha) y H2 (paro). Una vez validado, presiona los botones para operar el circuito en vivo.",
   vb: [560, 560],
+  source: ["railL"],
+  return: ["railN"],
   components: [
     railComp("railL", true, 420, "L", 300, 60),
     railComp("railN", true, 420, "N", 300, 500),
     C("F2", "F2 térmico", TPL.contact("NC", "95-96", "95", "96"), 220, 130),
-    C("S0", "S0 Paro", TPL.button("NC", "1-2", "1", "2"), 220, 210),
-    C("S1", "S1 Marcha", TPL.button("NO", "3-4", "3", "4"), 170, 300),
-    C("K1aux1", "K1 (sello)", TPL.contact("NO", "13-14", "13", "14"), 270, 300),
+    C("S0", "S0 Paro", TPL.button("NC", "1-2", "1", "2"), 220, 210, { manual: true }),
+    C("S1", "S1 Marcha", TPL.button("NO", "3-4", "3", "4"), 170, 300, { manual: true }),
+    C("K1aux1", "K1 (sello)", TPL.contact("NO", "13-14", "13", "14"), 270, 300, { derivedFrom: "K1coil" }),
     C("K1coil", "K1", TPL.coil("K1", "contactor"), 220, 400),
-    C("K1aux2", "K1", TPL.contact("NO", "23-24", "23", "24"), 400, 150),
+    C("K1aux2", "K1", TPL.contact("NO", "23-24", "23", "24"), 400, 150, { derivedFrom: "K1coil" }),
     C("H1", "H1 marcha", TPL.lamp("H1", "green"), 400, 240),
-    C("K1aux3", "K1", TPL.contact("NC", "21-22", "21", "22"), 480, 150),
+    C("K1aux3", "K1", TPL.contact("NC", "21-22", "21", "22"), 480, 150, { derivedFrom: "K1coil" }),
     C("H2", "H2 paro", TPL.lamp("H2", "red"), 480, 240),
   ],
   nets: [
@@ -133,20 +135,22 @@ const revControl = {
   group: "reversa",
   kind: "control",
   title: "Arranque con Inversión de Giro — Circuito de Control",
-  brief: "Cablea el control de un arrancador reversible: S1 (adelante) y S2 (reversa) con sus contactos de sello, y el enclavamiento eléctrico cruzado entre KF y KR para que nunca cierren al mismo tiempo.",
+  brief: "Cablea el control de un arrancador reversible: S1 (adelante) y S2 (reversa) con sus contactos de sello, y el enclavamiento eléctrico cruzado entre KF y KR para que nunca cierren al mismo tiempo. Una vez validado, opera los botones en vivo.",
   vb: [640, 560],
+  source: ["railL"],
+  return: ["railN"],
   components: [
     railComp("railL", true, 500, "L", 340, 60),
     railComp("railN", true, 500, "N", 340, 500),
     C("F2", "F2 térmico", TPL.contact("NC", "95-96", "95", "96"), 260, 130),
-    C("S0", "S0 Paro", TPL.button("NC", "1-2", "1", "2"), 260, 210),
-    C("S1", "S1 Adelante", TPL.button("NO", "3-4", "3", "4"), 180, 300),
-    C("KFaux1", "KF (sello)", TPL.contact("NO", "13-14", "13", "14"), 300, 300),
-    C("KRaux_i1", "KR (enclav.)", TPL.contact("NC", "21-22", "21", "22"), 380, 300),
+    C("S0", "S0 Paro", TPL.button("NC", "1-2", "1", "2"), 260, 210, { manual: true }),
+    C("S1", "S1 Adelante", TPL.button("NO", "3-4", "3", "4"), 180, 300, { manual: true }),
+    C("KFaux1", "KF (sello)", TPL.contact("NO", "13-14", "13", "14"), 300, 300, { derivedFrom: "KFcoil" }),
+    C("KRaux_i1", "KR (enclav.)", TPL.contact("NC", "21-22", "21", "22"), 380, 300, { derivedFrom: "KRcoil" }),
     C("KFcoil", "KF", TPL.coil("KF", "adelante"), 300, 400),
-    C("S2", "S2 Reversa", TPL.button("NO", "3-4", "3", "4"), 460, 300),
-    C("KRaux1", "KR (sello)", TPL.contact("NO", "13-14", "13", "14"), 540, 300),
-    C("KFaux_i1", "KF (enclav.)", TPL.contact("NC", "21-22", "21", "22"), 460, 220),
+    C("S2", "S2 Reversa", TPL.button("NO", "3-4", "3", "4"), 460, 300, { manual: true }),
+    C("KRaux1", "KR (sello)", TPL.contact("NO", "13-14", "13", "14"), 540, 300, { derivedFrom: "KRcoil" }),
+    C("KFaux_i1", "KF (enclav.)", TPL.contact("NC", "21-22", "21", "22"), 460, 220, { derivedFrom: "KFcoil" }),
     C("KRcoil", "KR", TPL.coil("KR", "reversa"), 500, 400),
   ],
   nets: [
@@ -193,22 +197,24 @@ const ydControl = {
   group: "estrella-delta",
   kind: "control",
   title: "Arranque Estrella-Triángulo — Circuito de Control",
-  brief: "Cablea el control temporizado: al presionar S1 energizas K1 (línea) y K2 (estrella) junto con el temporizador KT. Al vencer el tiempo, KT desenergiza K2 y energiza K3 (triángulo), con enclavamiento eléctrico entre K2 y K3.",
+  brief: "Cablea el control temporizado: al presionar S1 energizas K1 (línea) y K2 (estrella) junto con el temporizador KT. Al vencer el tiempo, KT desenergiza K2 y energiza K3 (triángulo), con enclavamiento eléctrico entre K2 y K3. El temporizador corre en tiempo real (3 s) una vez validado el circuito.",
   vb: [700, 620],
+  source: ["railL"],
+  return: ["railN"],
   components: [
     railComp("railL", true, 560, "L", 360, 50),
     railComp("railN", true, 560, "N", 360, 570),
     C("F2", "F2 térmico", TPL.contact("NC", "95-96", "95", "96"), 200, 110),
-    C("S0", "S0 Paro", TPL.button("NC", "1-2", "1", "2"), 200, 180),
-    C("S1", "S1 Marcha", TPL.button("NO", "3-4", "3", "4"), 140, 260),
-    C("K1aux1", "K1 (sello)", TPL.contact("NO", "13-14", "13", "14"), 260, 260),
+    C("S0", "S0 Paro", TPL.button("NC", "1-2", "1", "2"), 200, 180, { manual: true }),
+    C("S1", "S1 Marcha", TPL.button("NO", "3-4", "3", "4"), 140, 260, { manual: true }),
+    C("K1aux1", "K1 (sello)", TPL.contact("NO", "13-14", "13", "14"), 260, 260, { derivedFrom: "K1coil" }),
     C("K1coil", "K1 (línea)", TPL.coil("K1", "línea"), 200, 350),
     C("KTcoil", "KT", TPL.coil("KT", "temporiz."), 340, 350),
-    C("KTnc", "KT (15-16)", TPL.contact("NC", "15-16", "15", "16"), 460, 260),
-    C("K3auxNC", "K3 (enclav.)", TPL.contact("NC", "21-22", "21", "22"), 460, 350),
+    C("KTnc", "KT (15-16)", TPL.contact("NC", "15-16", "15", "16"), 460, 260, { timedFrom: { coil: "KTcoil", delayMs: 3000 } }),
+    C("K3auxNC", "K3 (enclav.)", TPL.contact("NC", "21-22", "21", "22"), 460, 350, { derivedFrom: "K3coil" }),
     C("K2coil", "K2 (estrella)", TPL.coil("K2", "estrella"), 460, 440),
-    C("KTno", "KT (15-18)", TPL.contact("NO", "15-18", "15", "18"), 580, 260),
-    C("K2auxNC", "K2 (enclav.)", TPL.contact("NC", "21-22", "21", "22"), 580, 350),
+    C("KTno", "KT (15-18)", TPL.contact("NO", "15-18", "15", "18"), 580, 260, { timedFrom: { coil: "KTcoil", delayMs: 3000 } }),
+    C("K2auxNC", "K2 (enclav.)", TPL.contact("NC", "21-22", "21", "22"), 580, 350, { derivedFrom: "K2coil" }),
     C("K3coil", "K3 (triángulo)", TPL.coil("K3", "triángulo"), 580, 440),
   ],
   nets: [
@@ -313,30 +319,34 @@ const autoControl = {
   group: "autotransformador",
   kind: "control",
   title: "Arranque por Autotransformador — Circuito de Control",
-  brief: "Al presionar S1 energizas KS (arranque) y KC (común) junto con KT. Al vencer el tiempo, KT desenergiza KS/KC y energiza KL (línea), que se autosostiene con su propio sello. Enclavamiento cruzado entre KS y KL.",
+  brief: "Al presionar S1 energizas KS (arranque) y KC (común) junto con KT. Al vencer el tiempo, KT desenergiza KS/KC y energiza KL (línea), que se autosostiene con su propio sello. Enclavamiento cruzado entre KS y KL. El temporizador corre en tiempo real (3 s).",
   vb: [760, 620],
+  source: ["railL"],
+  return: ["railN"],
   components: [
     railComp("railL", true, 620, "L", 390, 50),
     railComp("railN", true, 620, "N", 390, 570),
     C("F2", "F2 térmico", TPL.contact("NC", "95-96", "95", "96"), 200, 110),
-    C("S0", "S0 Paro", TPL.button("NC", "1-2", "1", "2"), 200, 180),
-    C("S1", "S1 Marcha", TPL.button("NO", "3-4", "3", "4"), 140, 260),
-    C("KSauxSeal", "KS (sello)", TPL.contact("NO", "13-14", "13", "14"), 260, 260),
-    C("KLauxNC", "KL (enclav.)", TPL.contact("NC", "21-22", "21", "22"), 200, 340),
-    C("KScoil", "KS (arranque)", TPL.coil("KS", "arranque"), 200, 430),
-    C("KCcoil", "KC (común)", TPL.coil("KC", "común"), 320, 430),
-    C("KTcoil", "KT", TPL.coil("KT", "temporiz."), 440, 430),
-    C("KTno", "KT (15-18)", TPL.contact("NO", "15-18", "15", "18"), 460, 260),
-    C("KSauxNC", "KS (enclav.)", TPL.contact("NC", "21-22", "21", "22"), 580, 260),
-    C("KLauxSeal", "KL (sello)", TPL.contact("NO", "13-14", "13", "14"), 580, 340),
-    C("KLcoil", "KL (línea)", TPL.coil("KL", "línea"), 580, 430),
+    C("S0", "S0 Paro", TPL.button("NC", "1-2", "1", "2"), 200, 180, { manual: true }),
+    C("S1", "S1 Marcha", TPL.button("NO", "3-4", "3", "4"), 140, 260, { manual: true }),
+    C("KTauxSeal", "KT (sello)", TPL.contact("NO", "13-14", "13", "14"), 260, 260, { derivedFrom: "KTcoil" }),
+    C("KTcoil", "KT", TPL.coil("KT", "temporiz."), 200, 350),
+    C("KTnc", "KT (15-16)", TPL.contact("NC", "15-16", "15", "16"), 340, 350, { timedFrom: { coil: "KTcoil", delayMs: 3000 } }),
+    C("KLauxNC", "KL (enclav.)", TPL.contact("NC", "21-22", "21", "22"), 340, 430, { derivedFrom: "KLcoil" }),
+    C("KScoil", "KS (arranque)", TPL.coil("KS", "arranque"), 220, 520),
+    C("KCcoil", "KC (común)", TPL.coil("KC", "común"), 340, 520),
+    C("KTno", "KT (15-18)", TPL.contact("NO", "15-18", "15", "18"), 460, 260, { timedFrom: { coil: "KTcoil", delayMs: 3000 } }),
+    C("KSauxNC", "KS (enclav.)", TPL.contact("NC", "21-22", "21", "22"), 580, 260, { derivedFrom: "KScoil" }),
+    C("KLauxSeal", "KL (sello)", TPL.contact("NO", "13-14", "13", "14"), 580, 350, { derivedFrom: "KLcoil" }),
+    C("KLcoil", "KL (línea)", TPL.coil("KL", "línea"), 580, 440),
   ],
   nets: [
     ["railL", "F2.95"],
     ["F2.96", "S0.1"],
-    ["S0.2", "S1.3", "KSauxSeal.13"],
-    ["S1.4", "KSauxSeal.14", "KLauxNC.21"],
-    ["KLauxNC.22", "KScoil.A1", "KCcoil.A1", "KTcoil.A1", "KTno.15", "KLauxSeal.13"],
+    ["S0.2", "S1.3", "KTauxSeal.13", "KLauxSeal.13"],
+    ["S1.4", "KTauxSeal.14", "KTcoil.A1", "KTnc.15", "KTno.15"],
+    ["KTnc.16", "KLauxNC.21"],
+    ["KLauxNC.22", "KScoil.A1", "KCcoil.A1"],
     ["KTno.18", "KSauxNC.21"],
     ["KSauxNC.22", "KLcoil.A1", "KLauxSeal.14"],
     ["railN", "KScoil.A2", "KCcoil.A2", "KTcoil.A2", "KLcoil.A2"],
@@ -345,29 +355,25 @@ const autoControl = {
     logStep("Presionas S1 (marcha)..."),
     actStep((d) => {
       d.setClosed("S1", true);
-      d.setClosed("KSauxSeal", true);
+      d.setClosed("KTauxSeal", true);
+      d.setEnergized("KTcoil", true);
       d.setEnergized("KScoil", true);
       d.setEnergized("KCcoil", true);
-      d.setEnergized("KTcoil", true);
       d.setClosed("KSauxNC", false);
-    }, "KS y KC se energizan juntos: motor conectado al tap del autotransformador (65%). Su NC (21-22) bloquea a KL.", 1000),
-    actStep((d) => { d.setClosed("S1", false); }, "Sueltas S1 — KS se mantiene por su propio sello (13-14).", 700),
+    }, "KT se energiza y se sella (13-14). Con 15-16 cerrado en reposo, KS y KC arrancan: motor al tap del autotransformador (65%).", 1000),
+    actStep((d) => { d.setClosed("S1", false); }, "Sueltas S1 — KT se mantiene por su propio sello.", 700),
     logStep("Transcurre el tiempo ajustado en KT..."),
     actStep((d) => {
-      d.setClosed("KTno", true);
-    }, "KT cierra 15-18, pero el enclavamiento de KS (21-22) aún bloquea a KL...", 800),
-    actStep((d) => {
-      d.setClosed("KSauxSeal", false);
+      d.setClosed("KTnc", false);
       d.setEnergized("KScoil", false);
       d.setEnergized("KCcoil", false);
       d.setClosed("KSauxNC", true);
-    }, "KS y KC se abren (pierden el sello) — el enclavamiento libera a KL.", 800),
+      d.setClosed("KTno", true);
+    }, "KT vence: abre 15-16 (KS/KC se desenergizan) y cierra 15-18.", 900),
     actStep((d) => {
       d.setEnergized("KLcoil", true);
       d.setClosed("KLauxSeal", true);
       d.setClosed("KLauxNC", false);
-      d.setEnergized("KTcoil", false);
-      d.setClosed("KTno", false);
     }, "KL se energiza y se autosostiene con su sello (13-14): motor a tensión plena, directo a línea.", 1000),
   ],
 };

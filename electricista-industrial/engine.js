@@ -151,6 +151,7 @@ const TPL = {};
 
 TPL.coil = (label, sub) => ({
   w: 44, h: 60,
+  isCoil: true,
   terminals: { A1: { x: 0, y: -30 }, A2: { x: 0, y: 30 } },
   draw(g) {
     g.appendChild(svgEl("line", { x1: 0, y1: -30, x2: 0, y2: -22, class: "cable-core" }));
@@ -188,6 +189,7 @@ function contactGap(g, kind, y1, y2) {
 TPL.contact = (kind, ref, t1, t2) => ({
   // kind: 'NO' | 'NC'
   w: 26, h: 40,
+  gate: true,
   terminals: { [t1]: { x: 0, y: -20 }, [t2]: { x: 0, y: 20 } },
   restClosed: kind === "NC",
   draw(g) {
@@ -198,18 +200,23 @@ TPL.contact = (kind, ref, t1, t2) => ({
 
 TPL.button = (kind, ref, t1, t2) => ({
   w: 34, h: 46,
+  gate: true,
+  btnKind: kind,
   terminals: { [t1]: { x: 0, y: -23 }, [t2]: { x: 0, y: 23 } },
   restClosed: kind === "NC",
   draw(g) {
     contactGap(g, kind, -23, 23);
     g.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 12.5, class: "bezel-ring", filter: "url(#fDrop)" }));
-    g.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 9, class: kind === "NO" ? "btn-dome dome-green" : "btn-dome dome-red" }));
+    g.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 9, class: (kind === "NO" ? "btn-dome dome-green" : "btn-dome dome-red") + " btn-pressable" }));
     g.appendChild(text(18, 3, ref, "sym-ref", "start"));
   },
 });
 
 TPL.lamp = (label, color) => ({
   w: 30, h: 40,
+  isLamp: true,
+  lampColor: color,
+  lampLabel: label,
   terminals: { X1: { x: 0, y: -20 }, X2: { x: 0, y: 20 } },
   draw(g) {
     g.appendChild(svgEl("line", { x1: 0, y1: -20, x2: 0, y2: -11, class: "cable-core" }));
@@ -224,6 +231,7 @@ TPL.lamp = (label, color) => ({
 
 TPL.pole = (ref, tin, tout) => ({
   w: 26, h: 44,
+  gate: true,
   terminals: { [tin]: { x: 0, y: -22 }, [tout]: { x: 0, y: 22 } },
   restClosed: false,
   draw(g) {
@@ -380,6 +388,9 @@ class Diagram {
       this.uf.union(ids[0], rid); // also alias the plain rail id itself
       this.termPos.set(rid, { ...this.termPos.get(ids[0]), isAliasOnly: true });
     }
+    this.railTapIds = railGroups;
+    this._timerState = {};
+    this._bindManualControls();
 
     for (const [id, info] of this.termPos) {
       if (info.isAliasOnly) continue;
@@ -393,6 +404,8 @@ class Diagram {
     if (this.exercise.staticWires) {
       for (const [a, b] of this.exercise.staticWires) this._drawWire(a, b, true);
     }
+
+    this.solve();
   }
 
   _autoTaps(tpl) {
@@ -407,6 +420,153 @@ class Diagram {
 
   _registerTerminal(id, abs, railId, isRail) {
     this.termPos.set(id, { x: abs.x, y: abs.y, railId: isRail ? railId : null });
+  }
+
+  /* ---------------- tiempo real: presionar botones y ver la corriente ---------------- */
+
+  _bindManualControls() {
+    if (!this.exercise.source) return;
+    for (const comp of this.exercise.components) {
+      if (!comp.manual) continue;
+      const g = this.compGroups.get(comp.id);
+      const dome = g.querySelector(".btn-pressable");
+      if (!dome) continue;
+      const press = (e) => { e.preventDefault(); this.pressManual(comp.id, true); };
+      const release = (e) => { e.preventDefault(); this.pressManual(comp.id, false); };
+      dome.addEventListener("mousedown", press);
+      dome.addEventListener("touchstart", press, { passive: false });
+      window.addEventListener("mouseup", release);
+      dome.addEventListener("touchend", release);
+      dome.addEventListener("touchcancel", release);
+      dome.classList.add("pressable-hit");
+    }
+  }
+
+  // manually actuate a pushbutton: pressed=true means the physical button is
+  // held down (NO contact closes, NC contact opens), released returns it to
+  // its spring rest-state. Recomputes the whole circuit immediately.
+  pressManual(compId, pressed) {
+    const comp = this.exercise.components.find((c) => c.id === compId);
+    const g = this.compGroups.get(compId);
+    if (!comp || !g) return;
+    const restClosed = !!comp.tpl.restClosed;
+    const wantClosed = pressed ? !restClosed : restClosed;
+    g.classList.toggle("closed", wantClosed);
+    g.classList.toggle("pressed", pressed);
+    this.solve();
+  }
+
+  // fixed-point relay-logic solver: figures out, from the current state of
+  // every switch/contact, which coils are energized and which wires are
+  // carrying current right now — and keeps contacts that are derived from a
+  // coil (seals, interlocks) in sync, cascading until the circuit settles.
+  solve() {
+    const ex = this.exercise;
+    if (!ex.source) return;
+
+    const addE = (map, a, b) => {
+      if (!map.has(a)) map.set(a, new Set());
+      if (!map.has(b)) map.set(b, new Set());
+      map.get(a).add(b);
+      map.get(b).add(a);
+    };
+    const baseAdj = new Map();
+    for (const rid in this.railTapIds) {
+      for (const tid of this.railTapIds[rid]) addE(baseAdj, rid, tid);
+    }
+    for (const w of this.wires) addE(baseAdj, w.a, w.b);
+    if (ex.staticWires) for (const [a, b] of ex.staticWires) addE(baseAdj, a, b);
+
+    const gateComps = ex.components.filter((c) => c.tpl.gate);
+    const coilComps = ex.components.filter((c) => c.tpl.isCoil);
+    const lampComps = ex.components.filter((c) => c.tpl.isLamp);
+
+    const bfs = (adj, starts) => {
+      const seen = new Set(starts);
+      const stack = [...starts];
+      while (stack.length) {
+        const cur = stack.pop();
+        for (const nb of adj.get(cur) || []) {
+          if (!seen.has(nb)) { seen.add(nb); stack.push(nb); }
+        }
+      }
+      return seen;
+    };
+
+    let liveSrc = new Set(), liveRet = new Set();
+    for (let iter = 0; iter < 8; iter++) {
+      const adj = new Map();
+      for (const [k, set] of baseAdj) adj.set(k, new Set(set));
+      for (const gc of gateComps) {
+        const grp = this.compGroups.get(gc.id);
+        if (grp && grp.classList.contains("closed")) {
+          const names = Object.keys(gc.tpl.terminals);
+          addE(adj, gc.id + "." + names[0], gc.id + "." + names[1]);
+        }
+      }
+      liveSrc = bfs(adj, ex.source);
+      liveRet = ex.return ? bfs(adj, ex.return) : new Set();
+
+      let changed = false;
+      for (const cc of coilComps) {
+        const names = Object.keys(cc.tpl.terminals);
+        const en = liveSrc.has(cc.id + "." + names[0]) && (ex.return ? liveRet.has(cc.id + "." + names[1]) : true);
+        const grp = this.compGroups.get(cc.id);
+        if (grp.classList.contains("energized") !== en) changed = true;
+        grp.classList.toggle("energized", en);
+      }
+      for (const gc of gateComps) {
+        if (!gc.derivedFrom) continue;
+        const coilGrp = this.compGroups.get(gc.derivedFrom);
+        const coilEnergized = coilGrp ? coilGrp.classList.contains("energized") : false;
+        const wantClosed = gc.tpl.restClosed ? !coilEnergized : coilEnergized;
+        const grp = this.compGroups.get(gc.id);
+        if (grp.classList.contains("closed") !== wantClosed) changed = true;
+        grp.classList.toggle("closed", wantClosed);
+      }
+      if (!changed) break;
+    }
+
+    for (const lc of lampComps) {
+      const grp = this.compGroups.get(lc.id);
+      const en = liveSrc.has(lc.id + ".X1") && (ex.return ? liveRet.has(lc.id + ".X2") : true);
+      grp.classList.toggle("energized", en);
+    }
+
+    this._updateTimedContacts();
+    this._markLiveWires(liveSrc, liveRet);
+    if (this.opts.onSolve) this.opts.onSolve();
+  }
+
+  _updateTimedContacts() {
+    for (const gc of this.exercise.components) {
+      if (!gc.tpl.gate || !gc.timedFrom) continue;
+      const coilGrp = this.compGroups.get(gc.timedFrom.coil);
+      const coilEnergized = coilGrp ? coilGrp.classList.contains("energized") : false;
+      const st = this._timerState[gc.id] || { energized: false, timeout: null };
+      if (coilEnergized && !st.energized) {
+        st.energized = true;
+        st.timeout = setTimeout(() => {
+          const grp = this.compGroups.get(gc.id);
+          grp.classList.toggle("closed", !gc.tpl.restClosed);
+          this.solve();
+        }, gc.timedFrom.delayMs);
+      } else if (!coilEnergized && st.energized) {
+        st.energized = false;
+        if (st.timeout) clearTimeout(st.timeout);
+        st.timeout = null;
+        const grp = this.compGroups.get(gc.id);
+        grp.classList.toggle("closed", !!gc.tpl.restClosed);
+      }
+      this._timerState[gc.id] = st;
+    }
+  }
+
+  _markLiveWires(liveSrc, liveRet) {
+    for (const w of this.wires) {
+      const live = (liveSrc.has(w.a) && liveSrc.has(w.b)) || (liveRet.has(w.a) && liveRet.has(w.b));
+      w.el.classList.toggle("live", live);
+    }
   }
 
   _onTerminalClick(id, e) {
@@ -438,6 +598,7 @@ class Diagram {
     if (exists) { this._removeWire(exists); return; }
     this._drawWire(a, b, false);
     this.uf.union(a, b);
+    this.solve();
     this.onChange();
   }
 
@@ -477,6 +638,7 @@ class Diagram {
     wireObj.el.remove();
     this.wires = this.wires.filter((w) => w !== wireObj);
     this._rebuildUnionFromWires();
+    this.solve();
     this.onChange();
   }
 
@@ -552,6 +714,11 @@ class Diagram {
   setRunning(id, on) {
     const g = this.compGroups.get(id);
     if (g) g.classList.toggle("running", on);
+  }
+
+  isEnergized(id) {
+    const g = this.compGroups.get(id);
+    return g ? g.classList.contains("energized") : false;
   }
 
   resetSimVisuals() {
