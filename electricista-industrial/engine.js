@@ -34,6 +34,9 @@ let DEFS_BUILT = new WeakSet();
 function buildDefs(svg) {
   const defs = svgEl("defs", {});
   defs.innerHTML = `
+    <pattern id="gGrid" width="28" height="28" patternUnits="userSpaceOnUse">
+      <path d="M28,0 L0,0 0,28" fill="none" stroke="#1b2740" stroke-width="1"/>
+    </pattern>
     <linearGradient id="gShell" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#8fa3d0"/>
       <stop offset="0.18" stop-color="#5c7099"/>
@@ -119,6 +122,14 @@ function buildDefs(svg) {
   svg.appendChild(defs);
 }
 
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+const WIRE_COLOR_COUNT = 10;
+
 /* ---------------- union-find ---------------- */
 
 class UnionFind {
@@ -162,6 +173,7 @@ TPL.coil = (label, sub) => ({
     g.appendChild(text(0, 1, label, "nameplate-label"));
     g.appendChild(text(0, 10, sub || "", "nameplate-sub"));
     for (let i = 0; i < 3; i++) g.appendChild(svgEl("line", { x1: -14, y1: 16 + i * 3, x2: 14, y2: 16 + i * 3, class: "relay-rib" }));
+    g.appendChild(svgEl("circle", { cx: 13, cy: -16, r: 3, class: "led-indicator" }));
     screwAt(g, 0, -30);
     screwAt(g, 0, 30);
   },
@@ -396,6 +408,10 @@ class Diagram {
     this.svg.innerHTML = "";
     this.svg.setAttribute("viewBox", `0 0 ${this.exercise.vb[0]} ${this.exercise.vb[1]}`);
     buildDefs(this.svg);
+    const bg = svgEl("rect", {
+      x: 0, y: 0, width: this.exercise.vb[0], height: this.exercise.vb[1], fill: "url(#gGrid)", class: "canvas-bg",
+    });
+    this.svg.appendChild(bg);
     this.gWires = svgEl("g", { class: "layer-wires" });
     this.gComp = svgEl("g", { class: "layer-components" });
     this.gTerm = svgEl("g", { class: "layer-terminals" });
@@ -436,6 +452,7 @@ class Diagram {
       for (const [a, b] of this.exercise.staticWires) this._drawWire(a, b, true);
     }
 
+    this._recolorWires();
     this.solve();
   }
 
@@ -604,6 +621,7 @@ class Diagram {
     const wantClosed = pressed ? !restClosed : restClosed;
     g.classList.toggle("closed", wantClosed);
     g.classList.toggle("pressed", pressed);
+    this._flash(g);
     this.solve();
   }
 
@@ -613,6 +631,7 @@ class Diagram {
     const g = this.compGroups.get(compId);
     if (!g) return;
     g.classList.toggle("closed");
+    this._flash(g);
     this.solve();
   }
 
@@ -652,6 +671,14 @@ class Diagram {
       }
       return seen;
     };
+
+    // snapshot the observable state before this solve pass, so we can flash
+    // only the parts that actually flip once everything has settled
+    const before = new Map();
+    for (const c of [...coilComps, ...gateComps, ...lampComps]) {
+      const grp = this.compGroups.get(c.id);
+      if (grp) before.set(c.id, { energized: grp.classList.contains("energized"), closed: grp.classList.contains("closed") });
+    }
 
     let liveSrc = new Set(), liveRet = new Set();
     for (let iter = 0; iter < 8; iter++) {
@@ -695,7 +722,27 @@ class Diagram {
 
     this._updateTimedContacts();
     this._markLiveWires(liveSrc, liveRet);
+    this._flashChanges(before);
     if (this.opts.onSolve) this.opts.onSolve();
+  }
+
+  // one bright pulse on any component whose energized/closed state actually
+  // flipped during this solve pass, so a change of state is unmistakable
+  _flashChanges(before) {
+    for (const [id, prev] of before) {
+      const grp = this.compGroups.get(id);
+      if (!grp) continue;
+      const now = { energized: grp.classList.contains("energized"), closed: grp.classList.contains("closed") };
+      if (now.energized !== prev.energized || now.closed !== prev.closed) this._flash(grp);
+    }
+  }
+
+  _flash(g) {
+    g.classList.remove("state-flash");
+    void g.offsetWidth; // force reflow so the animation restarts
+    g.classList.add("state-flash");
+    clearTimeout(g._flashTimer);
+    g._flashTimer = setTimeout(() => g.classList.remove("state-flash"), 550);
   }
 
   _updateTimedContacts() {
@@ -709,6 +756,7 @@ class Diagram {
         st.timeout = setTimeout(() => {
           const grp = this.compGroups.get(gc.id);
           grp.classList.toggle("closed", !gc.tpl.restClosed);
+          this._flash(grp);
           this.solve();
         }, gc.timedFrom.delayMs);
       } else if (!coilEnergized && st.energized) {
@@ -758,6 +806,7 @@ class Diagram {
     if (exists) { this._removeWire(exists); return; }
     this._drawWire(a, b, false);
     this.uf.union(a, b);
+    this._recolorWires();
     this.solve();
     this.onChange();
   }
@@ -769,8 +818,15 @@ class Diagram {
     if (Math.abs(pa.x - pb.x) < 1 || Math.abs(pa.y - pb.y) < 1) {
       d = `M${pa.x},${pa.y} L${pb.x},${pb.y}`;
     } else {
-      const midY = (pa.y + pb.y) / 2;
-      d = `M${pa.x},${pa.y} L${pa.x},${midY} L${pb.x},${midY} L${pb.x},${pb.y}`;
+      // route with a short jog near whichever terminal sits higher up, and
+      // nudge that jog by a hash of this specific wire's endpoints so wires
+      // fanning out from the same rail/point spread into distinct lanes
+      // instead of stacking exactly on top of each other
+      const key = a < b ? a + "|" + b : b + "|" + a;
+      const jitter = (hashStr(key) % 9 - 4) * 6;
+      const top = Math.min(pa.y, pb.y), bottom = Math.max(pa.y, pb.y);
+      const jogY = Math.min(Math.max(top + 22 + jitter, top + 4), bottom - 4);
+      d = `M${pa.x},${pa.y} L${pa.x},${jogY} L${pb.x},${jogY} L${pb.x},${pb.y}`;
     }
     const group = svgEl("g", { class: "wire-group" + (isStatic ? " wire-static" : "") });
     const shadow = svgEl("path", { d, class: "cable-shadow", fill: "none", transform: "translate(1.5,2.5)" });
@@ -808,6 +864,7 @@ class Diagram {
     wireObj.el.remove();
     this.wires = this.wires.filter((w) => w !== wireObj);
     this._rebuildUnionFromWires();
+    this._recolorWires();
     this.solve();
     this.onChange();
   }
@@ -817,6 +874,18 @@ class Diagram {
     if (!this.wires.length) return false;
     this._removeWire(this.wires[this.wires.length - 1]);
     return true;
+  }
+
+  // color every wire by the electrical node (net) it currently belongs to,
+  // so two wires on the same node always match and different nodes are
+  // always visually distinguishable, no matter how much they cross
+  _recolorWires() {
+    for (const w of this.wires) {
+      const root = this.uf.find(w.a);
+      const idx = hashStr(String(root)) % WIRE_COLOR_COUNT;
+      for (let i = 0; i < WIRE_COLOR_COUNT; i++) w.el.classList.remove("wire-c" + i);
+      w.el.classList.add("wire-c" + idx);
+    }
   }
 
   _rebuildUnionFromWires() {
@@ -880,12 +949,16 @@ class Diagram {
 
   setClosed(id, on) {
     const g = this.compGroups.get(id);
-    if (g) g.classList.toggle("closed", on);
+    if (!g) return;
+    if (g.classList.contains("closed") !== !!on) this._flash(g);
+    g.classList.toggle("closed", on);
   }
 
   setEnergized(id, on) {
     const g = this.compGroups.get(id);
-    if (g) g.classList.toggle("energized", on);
+    if (!g) return;
+    if (g.classList.contains("energized") !== !!on) this._flash(g);
+    g.classList.toggle("energized", on);
   }
 
   setRunning(id, on) {

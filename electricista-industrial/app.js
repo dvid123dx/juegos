@@ -540,7 +540,8 @@ function goFree() {
   }
 
   svg.addEventListener("click", (e) => {
-    if (!armedType || e.target !== svg) return;
+    if (!armedType) return;
+    if (e.target !== svg && !e.target.classList.contains("canvas-bg")) return;
     const item = FREE_PALETTE.find((p) => p.key === armedType);
     counters[item.key] = (counters[item.key] || 0) + 1;
     const spec = item.make(counters[item.key]);

@@ -231,18 +231,24 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .relay-shell { fill: url(#gShell); stroke: #0d1526; stroke-width: 1; transition: filter 0.2s; }
 .relay-toplight { fill: url(#gShellTop); opacity: 0.85; }
 .relay-rib { stroke: #0d1526; stroke-width: 1; opacity: 0.5; }
-.nameplate { fill: url(#gPlate); stroke: #000; stroke-width: 0.6; }
+.nameplate { fill: url(#gPlate); stroke: #000; stroke-width: 0.6; transition: fill 0.2s; }
 .nameplate-label { fill: #baffef; font-size: 13px; font-weight: 800; font-family: monospace; text-anchor: middle; }
 .nameplate-sub { fill: #7f93b8; font-size: 7.5px; font-family: monospace; text-anchor: middle; }
-.component.energized .relay-shell { filter: drop-shadow(0 0 10px #35d1c8) drop-shadow(0 0 3px #35d1c8); }
+.led-indicator { fill: #241414; stroke: #000; stroke-width: 0.6; transition: fill 0.15s; }
+.component.energized .relay-shell { filter: drop-shadow(0 0 11px #35e07a) drop-shadow(0 0 4px #35e07a); animation: energizedBreathe 1.4s ease-in-out infinite; }
 .component.energized .nameplate-label { fill: #baffef; }
-.component.energized .nameplate { fill: #163a35; }
+.component.energized .nameplate { fill: #164a2e; }
+.component.energized .led-indicator { fill: #43ff8f; filter: drop-shadow(0 0 4px #43ff8f); }
+@keyframes energizedBreathe {
+  0%, 100% { filter: drop-shadow(0 0 11px #35e07a) drop-shadow(0 0 4px #35e07a); }
+  50% { filter: drop-shadow(0 0 18px #35e07a) drop-shadow(0 0 7px #43ff8f); }
+}
 
 /* bloque de contactos: carcasa + cuchilla movil */
 .contact-housing { fill: #1c2740; stroke: #060a14; stroke-width: 1; opacity: 0.9; }
-.blade-fixed { stroke: #cfe3ff; stroke-width: 2.6; }
-.blade { stroke: #ffd27a; stroke-width: 3; opacity: 0; transition: opacity 0.15s; stroke-linecap: round; }
-.component.closed .blade { opacity: 1; }
+.blade-fixed { stroke: #98a7c4; stroke-width: 2.4; }
+.blade { stroke: #666f85; stroke-width: 3; opacity: 0.35; transition: opacity 0.15s, stroke 0.15s, filter 0.15s; stroke-linecap: round; }
+.component.closed .blade { opacity: 1; stroke: #43ff8f; filter: drop-shadow(0 0 5px #43ff8f); }
 .nc-mark { stroke: #7f93b8; stroke-width: 1.6; }
 
 /* botonera: aro cromado + capuchon de color */
@@ -250,24 +256,29 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .btn-dome { stroke-width: 0.8; transition: filter 0.15s; }
 .dome-green { fill: url(#gDomeGreenOff); stroke: #0a4a26; }
 .dome-red { fill: url(#gDomeRedOff); stroke: #4a0a08; }
-.component.closed .dome-green { fill: url(#gDomeGreenOn); filter: drop-shadow(0 0 5px #35e07a); }
-.component.closed .dome-red { fill: url(#gDomeRedOn); filter: drop-shadow(0 0 5px #ff4d4d); }
+.component.closed .dome-green { fill: url(#gDomeGreenOn); filter: drop-shadow(0 0 6px #35e07a); }
+.component.closed .dome-red { fill: url(#gDomeRedOn); filter: drop-shadow(0 0 6px #ff4d4d); }
 
 /* piloto: globo de vidrio con brillo */
 .lamp-glass { fill: url(#gLampOff); stroke: #333d54; stroke-width: 1; transition: fill 0.2s, filter 0.2s; }
 .lamp-caption { fill: #dbe7ff; font-size: 8px; font-weight: 700; text-anchor: middle; }
-.component.energized .lamp-glass.lamp-green { fill: url(#gLampGreenOn); filter: drop-shadow(0 0 9px #35e07a); }
-.component.energized .lamp-glass.lamp-red { fill: url(#gLampRedOn); filter: drop-shadow(0 0 9px #ff4d4d); }
+.component.energized .lamp-glass.lamp-green { fill: url(#gLampGreenOn); filter: drop-shadow(0 0 10px #43ff8f); animation: energizedBreathe 1.4s ease-in-out infinite; }
+.component.energized .lamp-glass.lamp-red { fill: url(#gLampRedOn); filter: drop-shadow(0 0 10px #ff4d4d); animation: lampRedBreathe 1.4s ease-in-out infinite; }
+@keyframes lampRedBreathe {
+  0%, 100% { filter: drop-shadow(0 0 10px #ff4d4d); }
+  50% { filter: drop-shadow(0 0 16px #ff8a8a); }
+}
 
 /* riel DIN + clemas (bloques de terminales amarillos) */
 .din-rail { fill: url(#gDinRail); stroke: #55617a; stroke-width: 1; }
 .clema-block { fill: url(#gClema); stroke: #6b4f10; stroke-width: 1; }
 
 /* motor trifasico */
-.motor-shell { fill: url(#gMotorBody); stroke: #1a2338; stroke-width: 1.4; }
+.motor-shell { fill: url(#gMotorBody); stroke: #1a2338; stroke-width: 1.4; transition: stroke 0.2s, stroke-width 0.2s; }
 .motor-face { fill: #e7ecf7; stroke: #7f93b8; stroke-width: 1; opacity: 0.9; }
 .motor-bolt { fill: #333d54; }
 .terminal-box { fill: url(#gClema); stroke: #6b4f10; stroke-width: 1.2; }
+.component.running .motor-shell { stroke: #43ff8f; stroke-width: 3; filter: drop-shadow(0 0 8px #35e07a); }
 
 /* autotransformador: nucleo bobinado */
 .wind-core { fill: url(#gShell); stroke: #0d1526; stroke-width: 1; }
@@ -280,17 +291,39 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .terminal-ok { stroke: var(--ok); }
 .terminal-bad { stroke: var(--bad); }
 
-/* cables: tubo con sombra + nucleo + brillo + ferrulas en cada extremo, como un cable real */
-.cable-shadow { stroke: #000; stroke-width: 6; opacity: 0.35; }
-.cable-tube { stroke: #e0a83e; stroke-width: 5.5; stroke-linecap: round; }
-.cable-hi { stroke: #fff3d6; stroke-width: 1.4; opacity: 0.7; stroke-linecap: round; }
+/* cables: tubo con sombra + nucleo + brillo + ferrulas en cada extremo, como un cable real.
+   cada cable se colorea segun el nodo electrico al que pertenece (wire-c0..9)
+   para poder distinguir su trayectoria aunque cruce otros cables. */
+.cable-shadow { stroke: #000; stroke-width: 6.5; opacity: 0.4; }
+.cable-tube { stroke: #e0a83e; stroke-width: 5; stroke-linecap: round; transition: stroke 0.15s; }
+.cable-hi { stroke: rgba(255,255,255,0.55); stroke-width: 1.3; opacity: 0.8; stroke-linecap: round; }
 .cable-hit { stroke: transparent; stroke-width: 18; cursor: pointer; fill: none; }
 .cable-ferrule { fill: url(#gScrew); stroke: #40485c; stroke-width: 0.7; }
-.wire-group:hover .cable-tube { stroke: #ff6b6b; }
+
+.wire-c0 .cable-tube { stroke: #e0a83e; }
+.wire-c1 .cable-tube { stroke: #4dd0e1; }
+.wire-c2 .cable-tube { stroke: #b39ddb; }
+.wire-c3 .cable-tube { stroke: #90caf9; }
+.wire-c4 .cable-tube { stroke: #f48fb1; }
+.wire-c5 .cable-tube { stroke: #ffd54f; }
+.wire-c6 .cable-tube { stroke: #80cbc4; }
+.wire-c7 .cable-tube { stroke: #ce93d8; }
+.wire-c8 .cable-tube { stroke: #ffab91; }
+.wire-c9 .cable-tube { stroke: #b0bec5; }
+
+.wire-group:hover .cable-tube { stroke: #ff6b6b !important; }
 .wire-group:hover .cable-hi { opacity: 0; }
 .wire-group:hover .cable-ferrule { fill: #ff9d9d; }
 .wire-static .cable-hit { cursor: default; }
-.wire-group.wire-selected .cable-tube { stroke: #ffe36b; filter: drop-shadow(0 0 4px #ffe36b); }
+.wire-group.wire-selected .cable-tube { stroke: #ffe36b !important; filter: drop-shadow(0 0 4px #ffe36b); }
+
+/* destello: un pulso breve y notorio en cualquier pieza que cambie de estado */
+.component.state-flash { animation: stateFlash 0.55s ease-out; }
+@keyframes stateFlash {
+  0% { filter: drop-shadow(0 0 2px #fff) brightness(1); }
+  25% { filter: drop-shadow(0 0 22px #fff) brightness(1.9); }
+  100% { filter: drop-shadow(0 0 2px #fff) brightness(1); }
+}
 
 @keyframes dash { to { stroke-dashoffset: -20; } }
 
@@ -326,7 +359,7 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .component.selected { filter: drop-shadow(0 0 6px #ffe36b); }
 
 /* corriente fluyendo en tiempo real por un cable energizado */
-.wire-group.live .cable-tube { stroke: #7dffb0; stroke-dasharray: 9 7; animation: flow 0.5s linear infinite; filter: drop-shadow(0 0 4px #35e07a); }
+.wire-group.live .cable-tube { stroke: #43ff8f !important; stroke-dasharray: 9 7; animation: flow 0.5s linear infinite; filter: drop-shadow(0 0 4px #35e07a); }
 .wire-group.live .cable-hi { opacity: 0; }
 @keyframes flow { to { stroke-dashoffset: -16; } }
 
