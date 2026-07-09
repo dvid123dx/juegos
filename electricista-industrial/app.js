@@ -243,6 +243,13 @@ function buildPanel3D(box, exercise, diagram) {
   box.style.width = boxW + "px";
   box.style.height = boxH + "px";
 
+  // the panel now lives in the narrow sidebar (next to the diagram, so it's
+  // always in view without scrolling) — shrink it to fit when it holds more
+  // pieces than that column is wide, instead of overflowing/getting clipped
+  const stageEl = document.getElementById("panel3d-stage");
+  const avail = (stageEl ? stageEl.clientWidth : 320) - 16;
+  const scale = boxW > avail ? Math.max(0.55, avail / boxW) : 1;
+
   const nameplate = document.createElement("div");
   nameplate.className = "p3d-nameplate";
   nameplate.textContent = exercise.title.split("—")[0].trim().toUpperCase();
@@ -312,9 +319,9 @@ function buildPanel3D(box, exercise, diagram) {
     }
   }
 
-  const stage = document.getElementById("panel3d-stage");
+  const stage = stageEl;
   let rotX = -10, rotY = 18;
-  function applyRot() { box.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`; }
+  function applyRot() { box.style.transform = `scale(${scale}) rotateX(${rotX}deg) rotateY(${rotY}deg)`; }
   applyRot();
   let dragging = false, lastX = 0, lastY = 0;
   stage.addEventListener("pointerdown", (e) => { dragging = true; lastX = e.clientX; lastY = e.clientY; stage.setPointerCapture(e.pointerId); });

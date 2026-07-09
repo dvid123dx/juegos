@@ -1002,20 +1002,33 @@ class Diagram {
     const pa = this.termPos.get(a), pb = this.termPos.get(b);
     if (!pa || !pb) return;
     let d;
-    if (Math.abs(pa.x - pb.x) < 1 || Math.abs(pa.y - pb.y) < 1) {
+    const dx = Math.abs(pa.x - pb.x), dy = Math.abs(pa.y - pb.y);
+    if (dx < 1 || dy < 1) {
       d = `M${pa.x},${pa.y} L${pb.x},${pb.y}`;
     } else {
-      // spread the elbow across almost the whole vertical span between the
-      // two terminals, at a fraction picked from a hash of this specific
-      // wire's endpoints, so every wire takes a visibly different path
-      // instead of many wires bunching along the same line
+      // spread the elbow across almost the whole span between the two
+      // terminals, at a fraction picked from a hash of this specific wire's
+      // endpoints, so every wire takes a visibly different path instead of
+      // many wires bunching along the same line. Route along whichever axis
+      // has the greater distance first: a pair of terminals that sit at
+      // nearly the same height but far apart in x (e.g. two components in
+      // the same row) used to always jog vertically first, producing a
+      // cramped little zigzag right where it leaves the terminal instead of
+      // a clean run across the row.
       const key = a < b ? a + "|" + b : b + "|" + a;
       const h = hashStr(key);
-      const top = Math.min(pa.y, pb.y), bottom = Math.max(pa.y, pb.y);
-      const span = Math.max(bottom - top, 1);
       const frac = 0.12 + (h % 89) / 100; // 0.12 .. 1.00 of the span
-      const jogY = Math.min(Math.max(top + span * frac, top + 4), bottom - 4);
-      d = roundedPath([pa, { x: pa.x, y: jogY }, { x: pb.x, y: jogY }, pb], 11);
+      if (dy >= dx) {
+        const top = Math.min(pa.y, pb.y), bottom = Math.max(pa.y, pb.y);
+        const span = Math.max(bottom - top, 1);
+        const jogY = Math.min(Math.max(top + span * frac, top + 4), bottom - 4);
+        d = roundedPath([pa, { x: pa.x, y: jogY }, { x: pb.x, y: jogY }, pb], 11);
+      } else {
+        const left = Math.min(pa.x, pb.x), right = Math.max(pa.x, pb.x);
+        const span = Math.max(right - left, 1);
+        const jogX = Math.min(Math.max(left + span * frac, left + 4), right - 4);
+        d = roundedPath([pa, { x: jogX, y: pa.y }, { x: jogX, y: pb.y }, pb], 11);
+      }
     }
     const group = svgEl("g", { class: "wire-group" + (isStatic ? " wire-static" : "") });
     const shadow = svgEl("path", { d, class: "cable-shadow", fill: "none", transform: "translate(1.5,2.5)" });
