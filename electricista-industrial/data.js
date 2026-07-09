@@ -26,6 +26,21 @@ function actStep(fn, msg, wait) {
   };
 }
 
+// dual-diagram versions for `combined: true` exercises, whose simulation
+// script drives the control diagram AND the power diagram together
+function cLogStep(msg) {
+  return { run: async (dc, dp, log) => { log(msg); await sleep(650); } };
+}
+function cActStep(fn, msg, wait) {
+  return {
+    run: async (dc, dp, log) => {
+      if (msg) log(msg);
+      fn(dc, dp);
+      await sleep(wait || 650);
+    },
+  };
+}
+
 /* =========================================================
    EJERCICIO 1: Arranque directo — CONTROL
    ========================================================= */
@@ -1292,12 +1307,267 @@ const conveyorPower = {
   ],
 };
 
+/* =========================================================
+   EJERCICIO 22 (COMBINADO): Motor Monofásico con Capacitor
+   ========================================================= */
+
+const singlePhaseMotorCombined = {
+  id: "1ph-motor-combined",
+  group: "monofasico",
+  kind: "combinado",
+  combined: true,
+  level: 1,
+  title: "Motor Monofásico con Capacitor — Control y Fuerza Combinados",
+  brief: "Cablea juntos el control (arranque-paro con sello) y la fuerza de un motor monofásico con capacitor de arranque, ambos en 127/220V monofásico (L-N). Verás las mismas referencias K1 y F2 en los dos circuitos — así se relacionan visualmente control y fuerza.",
+  control: {
+    source: ["railL"],
+    return: ["railN"],
+    vb: [560, 560],
+    components: [
+      railComp("railL", true, 420, "L", 300, 60),
+      railComp("railN", true, 420, "N", 300, 500),
+      C("F2", "F2 térmico", TPL.contact("NC", "95-96", "95", "96"), 220, 130),
+      C("S0", "S0 Paro", TPL.button("NC", "1-2", "1", "2"), 220, 210, { manual: true }),
+      C("S1", "S1 Marcha", TPL.button("NO", "3-4", "3", "4"), 170, 300, { manual: true }),
+      C("K1aux1", "K1 (sello)", TPL.contact("NO", "13-14", "13", "14"), 270, 300, { derivedFrom: "K1coil" }),
+      C("K1coil", "K1", TPL.coil("K1", "contactor"), 220, 400),
+      C("K1aux2", "K1", TPL.contact("NO", "23-24", "23", "24"), 400, 150, { derivedFrom: "K1coil" }),
+      C("H1", "H1 marcha", TPL.lamp("H1", "green"), 400, 240),
+    ],
+    nets: [
+      ["railL", "F2.95", "K1aux2.23"],
+      ["F2.96", "S0.1"],
+      ["S0.2", "S1.3", "K1aux1.13"],
+      ["S1.4", "K1aux1.14", "K1coil.A1"],
+      ["railN", "K1coil.A2", "H1.X2"],
+      ["K1aux2.24", "H1.X1"],
+    ],
+  },
+  power: {
+    vb: [420, 520],
+    components: [
+      railComp("railL", true, 300, "L", 220, 60),
+      railComp("railN", true, 300, "N", 220, 460),
+      C("Q1", "Q1 disyuntor", TPL.mcb("Q1", "1", "2"), 220, 140, { toggle: true }),
+      C("K1a", "K1", TPL.pole("1-2", "1", "2"), 220, 240),
+      C("F2a", "F2", TPL.pole("1-2", "1", "2"), 220, 330),
+      C("M", "Motor Monofásico", TPL.singlePhaseMotor(), 220, 420),
+    ],
+    nets: [
+      ["railL", "Q1.1"],
+      ["Q1.2", "K1a.1"],
+      ["K1a.2", "F2a.1"],
+      ["F2a.2", "M.L"],
+      ["railN", "M.N"],
+    ],
+  },
+  simulation: [
+    cLogStep("Presionas S1 (marcha)..."),
+    cActStep((dc, dp) => {
+      dc.setClosed("S1", true);
+      dc.setEnergized("K1coil", true);
+      dc.setClosed("K1aux1", true);
+      dc.setClosed("K1aux2", true);
+      dc.setEnergized("H1", true);
+      dp.setClosed("K1a", true);
+    }, "K1 se energiza (control): cierra el sello, y en fuerza K1 conecta la línea al motor.", 900),
+    cActStep((dc) => { dc.setClosed("S1", false); }, "Sueltas S1 — K1 se mantiene por el sello.", 700),
+    cActStep((dc, dp) => { dp.setRunning("M", true); }, "El motor monofásico arranca — el capacitor da el impulso inicial de giro.", 1000),
+    cLogStep("Presionas S0 (paro)..."),
+    cActStep((dc, dp) => {
+      dc.setEnergized("K1coil", false);
+      dc.setClosed("K1aux1", false);
+      dc.setClosed("K1aux2", false);
+      dc.setEnergized("H1", false);
+      dp.setClosed("K1a", false);
+      dp.setRunning("M", false);
+    }, "K1 se desenergiza en ambos circuitos. Motor detenido.", 900),
+  ],
+};
+
+/* =========================================================
+   EJERCICIO 23 (COMBINADO): Calentador Bifásico (220V)
+   ========================================================= */
+
+const twoPhaseHeaterCombined = {
+  id: "2ph-heater-combined",
+  group: "bifasico",
+  kind: "combinado",
+  combined: true,
+  level: 2,
+  title: "Bomba Bifásica (220V) — Control y Fuerza Combinados",
+  brief: "En instalaciones bifásicas se usan dos fases (L1 y L2) sin neutro para cargas de 220V. Cablea el control (arranque-paro) y la fuerza de una bomba monofásica alimentada entre L1 y L2, con K1 de dos polos.",
+  control: {
+    source: ["railL1"],
+    return: ["railL2"],
+    vb: [560, 560],
+    components: [
+      railComp("railL1", true, 420, "L1", 300, 60),
+      railComp("railL2", true, 420, "L2", 300, 500),
+      C("F2", "F2 térmico", TPL.contact("NC", "95-96", "95", "96"), 220, 130),
+      C("S0", "S0 Paro", TPL.button("NC", "1-2", "1", "2"), 220, 210, { manual: true }),
+      C("S1", "S1 Marcha", TPL.button("NO", "3-4", "3", "4"), 170, 300, { manual: true }),
+      C("K1aux1", "K1 (sello)", TPL.contact("NO", "13-14", "13", "14"), 270, 300, { derivedFrom: "K1coil" }),
+      C("K1coil", "K1", TPL.coil("K1", "contactor"), 220, 400),
+      C("K1aux2", "K1", TPL.contact("NO", "23-24", "23", "24"), 400, 150, { derivedFrom: "K1coil" }),
+      C("H1", "H1 marcha", TPL.lamp("H1", "green"), 400, 240),
+    ],
+    nets: [
+      ["railL1", "F2.95", "K1aux2.23"],
+      ["F2.96", "S0.1"],
+      ["S0.2", "S1.3", "K1aux1.13"],
+      ["S1.4", "K1aux1.14", "K1coil.A1"],
+      ["railL2", "K1coil.A2", "H1.X2"],
+      ["K1aux2.24", "H1.X1"],
+    ],
+  },
+  power: {
+    vb: [420, 520],
+    components: [
+      railComp("railL1", true, 300, "L1", 220, 60),
+      railComp("railL2", true, 300, "L2", 220, 460),
+      C("Q1a", "Q1", TPL.mcb("Q1", "1", "2"), 170, 140, { toggle: true }),
+      C("Q1b", "Q1", TPL.mcb("Q1", "1", "2"), 270, 140, { toggle: true }),
+      C("K1a", "K1", TPL.pole("1-2", "1", "2"), 170, 240),
+      C("K1b", "K1", TPL.pole("3-4", "3", "4"), 270, 240),
+      C("M", "Bomba (motor 1~)", TPL.singlePhaseMotor("L2"), 220, 380),
+    ],
+    nets: [
+      ["railL1", "Q1a.1"],
+      ["railL2", "Q1b.1"],
+      ["Q1a.2", "K1a.1"],
+      ["Q1b.2", "K1b.3"],
+      ["K1a.2", "M.L"],
+      ["K1b.4", "M.N"],
+    ],
+  },
+  simulation: [
+    cLogStep("Presionas S1 (marcha)..."),
+    cActStep((dc, dp) => {
+      dc.setClosed("S1", true);
+      dc.setEnergized("K1coil", true);
+      dc.setClosed("K1aux1", true);
+      dc.setClosed("K1aux2", true);
+      dc.setEnergized("H1", true);
+      dp.setClosed("K1a", true);
+      dp.setClosed("K1b", true);
+    }, "K1 se energiza y cierra sus DOS polos en fuerza — la bomba queda entre L1 y L2 (sin neutro).", 900),
+    cActStep((dc) => { dc.setClosed("S1", false); }, "Sueltas S1 — K1 se mantiene por el sello.", 700),
+    cActStep((dc, dp) => { dp.setRunning("M", true); }, "La bomba arranca, alimentada entre las dos fases.", 1000),
+    cLogStep("Presionas S0 (paro)..."),
+    cActStep((dc, dp) => {
+      dc.setEnergized("K1coil", false);
+      dc.setClosed("K1aux1", false);
+      dc.setClosed("K1aux2", false);
+      dc.setEnergized("H1", false);
+      dp.setClosed("K1a", false);
+      dp.setClosed("K1b", false);
+      dp.setRunning("M", false);
+    }, "K1 se desenergiza. Bomba detenida.", 900),
+  ],
+};
+
+/* =========================================================
+   EJERCICIO 24 (COMBINADO, AVANZADO): Banda Clasificadora con
+   Sensor y Actuador
+   ========================================================= */
+
+const sensorActuatorCombined = {
+  id: "sensor-actuator-combined",
+  group: "avanzado",
+  kind: "combinado",
+  combined: true,
+  level: 3,
+  title: "Banda Clasificadora con Sensor y Actuador — Control y Fuerza Combinados",
+  brief: "La banda (motor trifásico K1) transporta piezas; un sensor inductivo LS1 detecta las piezas metálicas y energiza CR, que dispara el actuador neumático (electroválvula) para desviarlas. Nivel avanzado: combina sensores, relé auxiliar, actuador, control y fuerza.",
+  control: {
+    source: ["railL"],
+    return: ["railN"],
+    vb: [700, 560],
+    components: [
+      railComp("railL", true, 560, "L", 360, 60),
+      railComp("railN", true, 560, "N", 360, 500),
+      C("F2", "F2 térmico", TPL.contact("NC", "95-96", "95", "96"), 220, 130),
+      C("S0", "S0 Paro", TPL.button("NC", "1-2", "1", "2"), 220, 200, { manual: true }),
+      C("S1", "S1 Marcha Banda", TPL.button("NO", "3-4", "3", "4"), 170, 280, { manual: true }),
+      C("K1aux1", "K1 (sello)", TPL.contact("NO", "13-14", "13", "14"), 270, 280, { derivedFrom: "K1coil" }),
+      C("K1coil", "K1", TPL.coil("K1", "banda"), 220, 380),
+      C("K1aux2", "K1", TPL.contact("NO", "23-24", "23", "24"), 660, 200, { derivedFrom: "K1coil" }),
+      C("LS1", "LS1 Inductivo", TPL.inductiveSensor("NO", "1-2", "1", "2"), 460, 200, { manual: true }),
+      C("CRcoil", "CR", TPL.coil("CR", "relé"), 460, 300),
+      C("CRaux1", "CR", TPL.contact("NO", "13-14", "13", "14"), 580, 200, { derivedFrom: "CRcoil" }),
+      C("YV1", "YV1 Actuador", TPL.actuator("desvío"), 580, 340),
+      C("H1", "H1 banda", TPL.lamp("H1", "green"), 660, 300),
+    ],
+    nets: [
+      ["railL", "F2.95", "K1aux2.23"],
+      ["F2.96", "S0.1"],
+      ["S0.2", "S1.3", "K1aux1.13", "LS1.1", "CRaux1.13"],
+      ["S1.4", "K1aux1.14", "K1coil.A1"],
+      ["LS1.2", "CRcoil.A1"],
+      ["CRaux1.14", "YV1.X1"],
+      ["K1aux2.24", "H1.X1"],
+      ["railN", "K1coil.A2", "CRcoil.A2", "YV1.X2", "H1.X2"],
+    ],
+  },
+  power: {
+    vb: [560, 620],
+    components: [
+      railComp("railL1", true, 420, "L1", 300, 50),
+      railComp("railL2", true, 420, "L2", 300, 90),
+      railComp("railL3", true, 420, "L3", 300, 130),
+      C("K1a", "K1", TPL.pole("1-2", "1", "2"), 220, 220),
+      C("K1b", "K1", TPL.pole("3-4", "3", "4"), 300, 220),
+      C("K1c", "K1", TPL.pole("5-6", "5", "6"), 380, 220),
+      C("F2a", "F2", TPL.pole("1-2", "1", "2"), 220, 320),
+      C("F2b", "F2", TPL.pole("3-4", "3", "4"), 300, 320),
+      C("F2c", "F2", TPL.pole("5-6", "5", "6"), 380, 320),
+      C("M", "Motor Banda", TPL.motor(true), 300, 450),
+    ],
+    nets: [
+      ["railL1", "K1a.1"],
+      ["railL2", "K1b.3"],
+      ["railL3", "K1c.5"],
+      ["K1a.2", "F2a.1"],
+      ["K1b.4", "F2b.3"],
+      ["K1c.6", "F2c.5"],
+      ["F2a.2", "M.U1"],
+      ["F2b.4", "M.V1"],
+      ["F2c.6", "M.W1"],
+    ],
+  },
+  simulation: [
+    cLogStep("Presionas S1 (marcha banda)..."),
+    cActStep((dc, dp) => {
+      dc.setClosed("S1", true);
+      dc.setEnergized("K1coil", true);
+      dc.setClosed("K1aux1", true);
+      dc.setClosed("K1aux2", true);
+      dc.setEnergized("H1", true);
+      dp.setClosed("K1a", true);
+      dp.setClosed("K1b", true);
+      dp.setClosed("K1c", true);
+      dp.setRunning("M", true);
+    }, "K1 arranca la banda (control y fuerza juntos).", 900),
+    cActStep((dc) => { dc.setClosed("S1", false); }, "Sueltas S1. Banda en marcha, sellada por K1aux1.", 700),
+    cLogStep("Una pieza metálica pasa frente al sensor LS1..."),
+    cActStep((dc) => {
+      dc.setClosed("LS1", true);
+      dc.setEnergized("CRcoil", true);
+      dc.setClosed("CRaux1", true);
+    }, "LS1 detecta el metal y energiza CR, que dispara el actuador YV1.", 900),
+    cActStep((dc) => { dc.setClosed("LS1", false); }, "La pieza sigue de largo — LS1 vuelve a reposo, CR se desenergiza y YV1 se retrae.", 900),
+    cActStep((dc) => { dc.setEnergized("CRcoil", false); dc.setClosed("CRaux1", false); }, "CR y YV1 quedan listos para la siguiente pieza.", 700),
+  ],
+};
+
 const EXERCISES = [
   dolControl, dolPower, revControl, ydControl, ydPower, autoControl, autoPower,
   twoSpeedControl, twoSpeedPower, alarmControl,
   vfdControl, vfdPower, chopperControl, chopperPower, twoStationControl,
   softStarterControl, softStarterPower, sequentialControl,
   ydRevControl, conveyorControl, conveyorPower,
+  singlePhaseMotorCombined, twoPhaseHeaterCombined, sensorActuatorCombined,
 ];
 
 /* =========================================================
@@ -1405,6 +1675,41 @@ const EXPLORER = [
     desc: "Regula la tensión aplicada al motor mediante tiristores (SCR) en antiparalelo por fase, rampando el voltaje de forma gradual para reducir la corriente y el golpe mecánico de arranque. Al terminar la rampa, un contactor de bypass suele derivar la corriente para ahorrar las pérdidas de conmutación de los tiristores.",
     face: "softstarter",
   },
+  {
+    id: "seta", name: "Paro de Emergencia (SETA)", tag: "E-STOP",
+    desc: "Botón de hongo rojo sobre base amarilla, normalmente cerrado. Corta TODO el circuito de control con máxima prioridad ante un peligro. A diferencia de un paro normal, se enclava al presionarlo y solo se libera girándolo — no puede rearmarse por accidente.",
+    face: "seta",
+  },
+  {
+    id: "mcb", name: "Disyuntor / MCB", tag: "1-2",
+    desc: "Interruptor termomagnético de riel DIN, normalmente de un solo polo. Protege circuitos monofásicos o de control contra cortocircuitos y sobrecargas, y sirve como interruptor de aislamiento manual.",
+    face: "mcb",
+  },
+  {
+    id: "clema", name: "Clema / Bloque de Conexiones", tag: "Empalme",
+    desc: "No conmuta nada — solo empalma dos conductores de forma segura y desmontable. Presente en cualquier tablero real para organizar el cableado y facilitar el mantenimiento.",
+    face: "clema",
+  },
+  {
+    id: "sensor-inductivo", name: "Sensor Inductivo de Proximidad", tag: "1-2 (NA/NC)",
+    desc: "Detecta objetos metálicos sin contacto físico, mediante un campo electromagnético. Muy usado en bandas transportadoras para contar o detectar piezas metálicas.",
+    face: "sensor-inductivo",
+  },
+  {
+    id: "sensor-foto", name: "Sensor Fotoeléctrico", tag: "1-2 (NA/NC)",
+    desc: "Detecta la interrupción o el reflejo de un haz de luz (infrarrojo o láser). A diferencia del inductivo, detecta cualquier material que bloquee el haz, no solo metales.",
+    face: "sensor-foto",
+  },
+  {
+    id: "actuador", name: "Actuador / Electroválvula Solenoide", tag: "X1-X2",
+    desc: "Convierte una señal eléctrica en movimiento mecánico: al energizarse, desplaza un émbolo que abre o cierra el paso de aire/fluido en un sistema neumático o hidráulico. Se cablea igual que una carga (lámpara), entre L y N a través de un contacto.",
+    face: "actuador",
+  },
+  {
+    id: "motor-monofasico", name: "Motor Monofásico con Capacitor", tag: "L / N",
+    desc: "Motor de una sola fase para cargas residenciales y comerciales pequeñas. El capacitor de arranque genera un campo desfasado que le da al rotor el impulso inicial de giro, ya que una sola fase no produce un campo rotante por sí sola.",
+    face: "motor-monofasico",
+  },
 ];
 
 /* =========================================================
@@ -1453,4 +1758,9 @@ const QUIZ = [
   { q: "En un arranque estrella-triángulo reversible, ¿por qué hay que presionar el paro (S0) antes de poder invertir el sentido de giro?", a: ["No es necesario, se puede invertir en cualquier momento", "Porque KF y KR están enclavados entre sí — mientras uno esté energizado, el otro queda bloqueado por seguridad", "Porque el temporizador lo exige por norma", "Porque el motor se daña si no se detiene primero"], correct: 1 },
   { q: "¿Qué diferencia hay entre un paro normal (S0) y un interruptor de emergencia tipo SETA?", a: ["Ninguna, cumplen la misma función", "La SETA suele ir primero en la línea, cortando TODO el circuito de control de una sola vez, con máxima prioridad; un paro normal puede ser parte de una secuencia", "La SETA es solo decorativa", "El paro normal tiene mayor prioridad que la SETA"], correct: 1 },
   { q: "En una cinta transportadora, ¿qué pasa si un fin de carrera (límite) NC se abre mientras el motor está sellado (auto-mantenido)?", a: ["No pasa nada, el sello lo mantiene energizado", "El contactor pierde alimentación de inmediato — el sello no puede mantener energizada una bobina si se corta su propia línea de alimentación", "El motor invierte el sentido de giro", "El térmico se dispara"], correct: 1 },
+  { q: "¿Por qué un motor monofásico necesita un capacitor de arranque?", a: ["Para reducir el consumo de energía en marcha", "Porque una sola fase no produce un campo magnético rotante por sí sola; el capacitor desfasa la corriente del devanado auxiliar para dar el impulso inicial de giro", "Para proteger contra sobrecarga", "Para invertir el sentido de giro"], correct: 1 },
+  { q: "En una instalación 'bifásica' (220V entre L1 y L2, sin neutro), ¿qué diferencia hay respecto a un circuito monofásico L-N?", a: ["Ninguna, es exactamente lo mismo", "Ambos conductores son fases activas (ninguno es neutro), por lo que ambos deben protegerse/conmutarse como línea", "El bifásico no necesita protección térmica", "El bifásico siempre es trifásico en realidad"], correct: 1 },
+  { q: "¿Cuál es la diferencia principal entre un sensor inductivo y uno fotoeléctrico?", a: ["No hay ninguna diferencia real", "El inductivo detecta solo metales por campo electromagnético; el fotoeléctrico detecta cualquier objeto que interrumpa o refleje un haz de luz", "El fotoeléctrico es más lento", "El inductivo necesita contacto físico con la pieza"], correct: 1 },
+  { q: "¿Cómo se cablea típicamente un actuador (electroválvula solenoide) en un circuito de control?", a: ["En serie con el motor principal", "Igual que una carga (lámpara): entre línea y neutro, a través de un contacto que la energiza", "Solo se conecta directo a tierra", "Requiere su propio transformador siempre"], correct: 1 },
+  { q: "¿Para qué sirve una clema (bloque de conexiones) en un tablero de control?", a: ["Para conmutar circuitos de potencia", "Para empalmar y organizar cables de forma segura y desmontable, sin conmutar nada", "Para proteger contra sobrecarga", "Para medir la corriente del circuito"], correct: 1 },
 ];

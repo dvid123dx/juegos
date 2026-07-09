@@ -109,6 +109,57 @@
   </section>
 </template>
 
+<template id="tpl-wiring-combined">
+  <section class="screen wiring-screen">
+    <div class="wiring-header">
+      <h2 class="screen-title" id="wiringc-title"></h2>
+      <p class="screen-sub" id="wiringc-brief"></p>
+    </div>
+    <div class="wiring-layout">
+      <div class="wiring-dual">
+        <div class="wiring-pane">
+          <h3 class="pane-title">Circuito de Control</h3>
+          <div class="wiring-canvas-wrap">
+            <svg id="wiringc-svg-c" class="wiring-svg"></svg>
+          </div>
+          <div class="pane-status" id="wiringc-status-c">Conecta las terminales de control.</div>
+          <div class="pane-actions">
+            <button id="btnc-check-c" class="btn btn-primary">Verificar control</button>
+            <button id="btnc-undo-c" class="btn">↺ Deshacer</button>
+            <button id="btnc-clear-c" class="btn btn-danger">Borrar</button>
+          </div>
+        </div>
+        <div class="wiring-pane">
+          <h3 class="pane-title">Circuito de Fuerza</h3>
+          <div class="wiring-canvas-wrap">
+            <svg id="wiringc-svg-p" class="wiring-svg"></svg>
+          </div>
+          <div class="pane-status" id="wiringc-status-p">Conecta las terminales de fuerza.</div>
+          <div class="pane-actions">
+            <button id="btnc-check-p" class="btn btn-primary">Verificar fuerza</button>
+            <button id="btnc-undo-p" class="btn">↺ Deshacer</button>
+            <button id="btnc-clear-p" class="btn btn-danger">Borrar</button>
+          </div>
+        </div>
+      </div>
+      <div class="wiring-side">
+        <div class="wiring-status" id="wiringc-status">Cablea control y fuerza — se relacionan por las mismas referencias (K1, F2...).</div>
+        <div class="wiring-actions">
+          <button id="btnc-hint" class="btn">Pista</button>
+        </div>
+        <button id="btnc-simulate" class="btn btn-accent" disabled>▶ Ver demostración guiada</button>
+        <div id="panel3d-section" class="panel3d-section hidden">
+          <h3 class="panel3d-title">Panel de Operación 3D <span>— arrastra para rotarlo</span></h3>
+          <div class="panel3d-stage" id="panel3d-stage">
+            <div class="panel3d-box" id="panel3d-box"></div>
+          </div>
+        </div>
+        <div class="wiring-log" id="wiringc-log"></div>
+      </div>
+    </div>
+  </section>
+</template>
+
 <template id="tpl-planos">
   <section class="screen planos-screen">
     <h2 class="screen-title">Planos de Referencia</h2>

@@ -543,6 +543,145 @@ TPL.selector = (ref, t1, t2) => ({
   },
 });
 
+TPL.emergencyStop = (ref, t1, t2) => ({
+  // paro de emergencia tipo SETA: hongo rojo grande sobre base amarilla,
+  // NC por defecto — se libera girando, no simplemente soltando
+  w: 44, h: 54,
+  gate: true,
+  btnKind: "NC",
+  terminals: { [t1]: { x: 0, y: -27 }, [t2]: { x: 0, y: 27 } },
+  restClosed: true,
+  draw(g) {
+    contactGap(g, "NC", -27, 27);
+    g.appendChild(svgEl("ellipse", { cx: 1.5, cy: 2, rx: 16, ry: 14, class: "mount-base" }));
+    g.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 16, class: "seta-ring", filter: "url(#fDrop)" }));
+    g.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 12.5, class: "seta-mushroom btn-pressable" }));
+    g.appendChild(text(23, 3, ref, "sym-ref", "start"));
+  },
+});
+
+TPL.mcb = (ref, tin, tout) => ({
+  // disyuntor / interruptor termomagnetico de riel DIN (MCB): un solo polo,
+  // palanca chica de encendido — protege circuitos monofasicos y de control
+  w: 26, h: 46,
+  gate: true,
+  restClosed: true,
+  terminals: { [tin]: { x: 0, y: -23 }, [tout]: { x: 0, y: 23 } },
+  draw(g) {
+    g.appendChild(svgEl("line", { x1: 0, y1: -23, x2: 0, y2: -15, class: "cable-core" }));
+    g.appendChild(svgEl("line", { x1: 0, y1: 15, x2: 0, y2: 23, class: "cable-core" }));
+    isoBox(g, 0, 0, 22, 30, 3, 5, "mcb-body", "mcb-top", "mcb-side");
+    g.appendChild(svgEl("rect", { x: -4, y: -9, width: 8, height: 18, rx: 2, class: "mcb-lever btn-pressable" }));
+    g.appendChild(text(16, 4, ref, "sym-ref", "start"));
+    screwAt(g, 0, -23, 4.6);
+    screwAt(g, 0, 23, 4.6);
+  },
+});
+
+TPL.terminalBlock = (ref, tin, tout) => ({
+  // clema / bloque de conexiones: no conmuta nada, solo empalma dos cables
+  // — util para mostrar puntos de union reales en instalaciones monofasicas
+  w: 20, h: 32,
+  gate: true,
+  restClosed: true,
+  terminals: { [tin]: { x: 0, y: -16 }, [tout]: { x: 0, y: 16 } },
+  draw(g) {
+    g.appendChild(svgEl("rect", { x: -8, y: -16, width: 16, height: 32, rx: 2, class: "clema-body", filter: "url(#fDrop)" }));
+    g.appendChild(svgEl("line", { x1: 0, y1: -12, x2: 0, y2: 12, class: "clema-strip" }));
+    screwAt(g, 0, -16, 4.8);
+    screwAt(g, 0, 16, 4.8);
+    g.appendChild(text(13, 3, ref, "sym-ref", "start"));
+  },
+});
+
+function sensorGap(g) {
+  g.appendChild(svgEl("rect", { x: -6, y: -19, width: 12, height: 15, rx: 2, class: "sensor-body btn-pressable" }));
+  g.appendChild(svgEl("circle", { cx: 0, cy: -19, r: 3, class: "sensor-led" }));
+}
+
+TPL.inductiveSensor = (kind, ref, t1, t2) => ({
+  // sensor de proximidad inductivo: detecta metal sin contacto fisico;
+  // aqui se opera manualmente para simular que una pieza lo activa
+  w: 34, h: 46,
+  gate: true,
+  btnKind: kind,
+  terminals: { [t1]: { x: 0, y: -23 }, [t2]: { x: 0, y: 23 } },
+  restClosed: kind === "NC",
+  draw(g) {
+    contactGap(g, kind, -23, 23);
+    sensorGap(g);
+    g.appendChild(svgEl("path", { d: "M-9,-19 L-13,-19 M9,-19 L13,-19", class: "sensor-field" }));
+    g.appendChild(text(17, 12, ref, "sym-ref", "start"));
+  },
+});
+
+TPL.photoSensor = (kind, ref, t1, t2) => ({
+  // sensor fotoelectrico (emisor-receptor): detecta la interrupcion de un
+  // haz de luz — mismo principio de operacion manual que el inductivo
+  w: 34, h: 46,
+  gate: true,
+  btnKind: kind,
+  terminals: { [t1]: { x: 0, y: -23 }, [t2]: { x: 0, y: 23 } },
+  restClosed: kind === "NC",
+  draw(g) {
+    contactGap(g, kind, -23, 23);
+    sensorGap(g);
+    g.appendChild(svgEl("path", { d: "M-11,-19 L14,-19", class: "sensor-beam" }));
+    g.appendChild(svgEl("path", { d: "M11,-22 L15,-19 L11,-16", class: "sensor-beam", fill: "none" }));
+    g.appendChild(text(17, 12, ref, "sym-ref", "start"));
+  },
+});
+
+TPL.actuator = (label) => ({
+  // actuador / electrovalvula solenoide: carga de 2 terminales que, al
+  // energizarse, desplaza un embolo — representa una valvula neumatica
+  w: 34, h: 52,
+  isLamp: true,
+  lampColor: "green",
+  lampLabel: label,
+  terminals: { X1: { x: 0, y: -26 }, X2: { x: 0, y: 26 } },
+  draw(g) {
+    g.appendChild(svgEl("line", { x1: 0, y1: -26, x2: 0, y2: -17, class: "cable-core" }));
+    g.appendChild(svgEl("line", { x1: 0, y1: 17, x2: 0, y2: 26, class: "cable-core" }));
+    isoBox(g, 0, 4, 26, 30, 3, 5, "act-body", "act-top", "act-side");
+    g.appendChild(svgEl("rect", { x: -4, y: -18, width: 8, height: 13, rx: 1.5, class: "act-piston" }));
+    g.appendChild(svgEl("circle", { cx: 9, cy: 4, r: 3.2, class: "act-led" }));
+    g.appendChild(text(0, 26, label, "nameplate-sub"));
+    screwAt(g, 0, -26, 5);
+    screwAt(g, 0, 26, 5);
+  },
+});
+
+TPL.singlePhaseMotor = (secondLabel) => ({
+  w: 84, h: 78,
+  terminals: { L: { x: -18, y: 34 }, N: { x: 18, y: 34 } },
+  draw(g) {
+    g.appendChild(svgEl("circle", { cx: 0, cy: -10, r: 30, class: "motor-shell", filter: "url(#fDrop)" }));
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2;
+      g.appendChild(svgEl("circle", { cx: Math.cos(a) * 25, cy: -10 + Math.sin(a) * 25, r: 1.9, class: "motor-bolt" }));
+    }
+    g.appendChild(svgEl("circle", { cx: 0, cy: -10, r: 19, class: "motor-face" }));
+    g.appendChild(text(0, -6, "M", "sym-motor"));
+    g.appendChild(text(0, 9, "1~", "sym-label-small"));
+    g.appendChild(svgEl("rect", { x: 18, y: -34, width: 11, height: 20, rx: 3, class: "cap-body" }));
+    g.appendChild(svgEl("line", { x1: 23.5, y1: -34, x2: 23.5, y2: -20, class: "cap-lead" }));
+    const fanWrap = svgEl("g", { class: "motor-fan-wrap", transform: "translate(0,-10)" });
+    const fan = svgEl("g", { class: "motor-fan" });
+    for (let i = 0; i < 3; i++) {
+      fan.appendChild(svgEl("path", { d: "M0,0 L5,-15 Q0,-19 -5,-15 Z", transform: `rotate(${i * 120})`, class: "motor-blade" }));
+    }
+    fan.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 3.8, class: "motor-hub" }));
+    fanWrap.appendChild(fan);
+    g.appendChild(fanWrap);
+    g.appendChild(svgEl("line", { x1: -18, y1: 20, x2: -18, y2: 26, class: "cable-core" }));
+    g.appendChild(svgEl("line", { x1: 18, y1: 20, x2: 18, y2: 26, class: "cable-core" }));
+    g.appendChild(svgEl("rect", { x: -34, y: 25, width: 68, height: 20, rx: 3, class: "terminal-box", filter: "url(#fDrop)" }));
+    screwAt(g, -18, 34, 5); g.appendChild(text(-18, 23, "L", "sym-ref"));
+    screwAt(g, 18, 34, 5); g.appendChild(text(18, 23, secondLabel || "N", "sym-ref"));
+  },
+});
+
 /* ---------------- Diagram ---------------- */
 
 class Diagram {

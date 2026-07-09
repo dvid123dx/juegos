@@ -132,6 +132,24 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .f-chopper-icon { color: #ffd54f; font-family: monospace; font-weight: 700; font-size: 14px; }
 .f-ss-ramp { width: 44px; height: 20px; background: linear-gradient(115deg, transparent 48%, #43ff8f 50%, transparent 52%), #06140f; border-radius: 3px; border: 1px solid #0d1526; }
 
+.f-seta { background: #1c2740; width: 85%; height: 85%; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+.f-seta-ring { width: 60px; height: 60px; border-radius: 50%; background: #ffd54f; display: flex; align-items: center; justify-content: center; }
+.f-seta-mushroom { width: 42px; height: 42px; border-radius: 50%; background: radial-gradient(circle at 32% 28%, #ff8a80, #c22b2b 55%, #6b0f0a); }
+
+.f-mcb { background: #1c2233; }
+.f-clema { background: #1c2740; width: 85%; height: 85%; border-radius: 10px; display: flex; gap: 6px; align-items: center; justify-content: center; }
+.f-clema-block { width: 16px; height: 46px; border-radius: 2px; background: linear-gradient(180deg, #e6c26a, #8a6c1f); }
+
+.f-sensor { background: #1c2740; width: 85%; height: 85%; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+.f-sensor-body { width: 30px; height: 42px; border-radius: 4px; background: linear-gradient(180deg, #aebbdf, #5f6c8f); }
+.f-sensor-led { width: 10px; height: 10px; border-radius: 50%; background: #ffb454; box-shadow: 0 0 8px #ffb454; }
+.f-sensor-beam { width: 46px; height: 2px; background: #43ff8f; box-shadow: 0 0 6px #43ff8f; }
+
+.f-actuador { background: #1c2740; width: 85%; height: 85%; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+.f-act-piston { width: 16px; height: 56px; border-radius: 3px; background: linear-gradient(180deg, #c7d0e6, #7f93b8); }
+
+.f-cap { width: 12px; height: 22px; border-radius: 3px; background: #2a3350; border: 1px solid #0d1526; position: absolute; margin-top: -70px; margin-left: 40px; }
+
 .f-lamp { background: #1c2740; width: 85%; height: 85%; border-radius: 10px; }
 .f-bulb { width: 50px; height: 50px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff2b0, #f2a900); box-shadow: 0 0 24px rgba(255,200,50,0.7); }
 
@@ -206,6 +224,17 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .wiring-svg { width: 100%; height: 620px; display: block; }
 
 .wiring-side { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 76px; }
+
+.wiring-dual { display: flex; flex-direction: column; gap: 18px; }
+.wiring-pane { display: flex; flex-direction: column; gap: 8px; }
+.pane-title { font-size: 14px; color: var(--accent2); }
+.pane-status {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px;
+  font-size: 12.5px; min-height: 36px;
+}
+.pane-actions { display: flex; gap: 8px; }
+.pane-actions .btn { padding: 8px 10px; font-size: 12.5px; }
+.wiring-dual .wiring-svg { height: 460px; }
 .wiring-status {
   background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px;
   font-size: 13.5px; min-height: 44px;
@@ -398,6 +427,45 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .brk-side { fill: #141d33; opacity: 0.95; }
 .brk-lever { fill: #c23b3b; stroke: #4a0a08; stroke-width: 0.8; transition: transform 0.15s; transform-box: fill-box; transform-origin: center; }
 .component.closed .brk-lever { fill: #2fae57; transform: translateY(-4px); }
+
+/* paro de emergencia (SETA) */
+.seta-ring { fill: #ffd54f; stroke: #8a6d10; stroke-width: 1; }
+.seta-mushroom { fill: #c22b2b; stroke: #4a0a08; stroke-width: 1; transition: transform 0.08s ease-out, filter 0.08s ease-out; transform-box: fill-box; transform-origin: center; }
+.component.pressed .seta-mushroom { transform: scale(0.88); filter: brightness(0.7); }
+
+/* disyuntor / MCB de riel DIN */
+.mcb-body { fill: #1c2233; stroke: #0d1526; stroke-width: 1; filter: url(#fDrop); }
+.mcb-top { fill: #8b96b8; opacity: 0.95; }
+.mcb-side { fill: #10152a; opacity: 0.95; }
+.mcb-lever { fill: #c23b3b; stroke: #4a0a08; stroke-width: 0.8; transition: transform 0.15s; transform-box: fill-box; transform-origin: center; }
+.component.closed .mcb-lever { fill: #2fae57; transform: translateY(-3px); }
+
+/* clema / bloque de conexiones */
+.clema-body { fill: url(#gClema); stroke: #6b4f10; stroke-width: 1; }
+.clema-strip { stroke: #b8873a; stroke-width: 3; }
+
+/* sensores (inductivo / fotoelectrico) */
+.sensor-body { fill: #8b96b8; stroke: #40485c; stroke-width: 0.8; }
+.sensor-led { fill: #4a3a10; stroke: #241d08; stroke-width: 0.5; transition: fill 0.15s; }
+.component.closed .sensor-led { fill: #ffb454; filter: drop-shadow(0 0 4px #ffb454); }
+.sensor-field { stroke: #ffb454; stroke-width: 1.2; opacity: 0; }
+.sensor-beam { stroke: #43ff8f; stroke-width: 1.2; opacity: 0.35; fill: none; }
+.component.closed .sensor-field { opacity: 0.9; animation: hornPulse 0.6s ease-out infinite; }
+.component:not(.closed) .sensor-beam { opacity: 0.9; }
+.component.closed .sensor-beam { opacity: 0; }
+
+/* actuador / electrovalvula solenoide */
+.act-body { fill: url(#gShell); stroke: #0d1526; stroke-width: 1; }
+.act-top { fill: #aebbdf; opacity: 0.95; }
+.act-side { fill: #141d33; opacity: 0.95; }
+.act-piston { fill: #c7d0e6; stroke: #4a5266; stroke-width: 0.8; transition: transform 0.18s ease-out; }
+.act-led { fill: #241414; stroke: #000; stroke-width: 0.6; transition: fill 0.15s; }
+.component.energized .act-piston { transform: translateY(9px); }
+.component.energized .act-led { fill: #43ff8f; filter: drop-shadow(0 0 4px #43ff8f); }
+
+/* capacitor de arranque (motor monofasico) */
+.cap-body { fill: #2a3350; stroke: #0d1526; stroke-width: 1; }
+.cap-lead { stroke: #7a5a20; stroke-width: 2; }
 
 /* seleccion de componente (modo libre) */
 .component.selected { filter: drop-shadow(0 0 6px #ffe36b); }

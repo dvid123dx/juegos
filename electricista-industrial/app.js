@@ -117,6 +117,20 @@ function faceHTML(face) {
       return `<div class="f-body f-selector"><div class="f-knob f-knob-selector"></div><div class="f-termrow">0 · 1</div></div>`;
     case "softstarter":
       return `<div class="f-body f-vfd"><div class="f-vfd-screen">100 %V</div><div class="f-ss-ramp"></div><div class="f-termrow">L1 L2 L3 · T1 T2 T3</div></div>`;
+    case "seta":
+      return `<div class="f-body f-seta"><div class="f-seta-ring"><div class="f-seta-mushroom"></div></div><div class="f-termrow">1&nbsp;&nbsp;2</div></div>`;
+    case "mcb":
+      return `<div class="f-body f-breaker f-mcb"><div class="f-lever"></div><div class="f-termrow">1&nbsp;&nbsp;2</div></div>`;
+    case "clema":
+      return `<div class="f-body f-clema"><div class="f-clema-block"></div><div class="f-clema-block"></div><div class="f-clema-block"></div></div>`;
+    case "sensor-inductivo":
+      return `<div class="f-body f-sensor"><div class="f-sensor-body"></div><div class="f-sensor-led"></div><div class="f-termrow">1&nbsp;&nbsp;2</div></div>`;
+    case "sensor-foto":
+      return `<div class="f-body f-sensor"><div class="f-sensor-body"></div><div class="f-sensor-beam"></div><div class="f-termrow">1&nbsp;&nbsp;2</div></div>`;
+    case "actuador":
+      return `<div class="f-body f-actuador"><div class="f-act-piston"></div><div class="f-termrow">X1&nbsp;&nbsp;X2</div></div>`;
+    case "motor-monofasico":
+      return `<div class="f-body f-motor"><div class="f-motorbody"><span>M</span><span class="f-tilde">1~</span></div><div class="f-cap"></div><div class="f-tbox">L&nbsp;&nbsp;&nbsp;N</div></div>`;
     default:
       return `<div class="f-body"></div>`;
   }
@@ -223,10 +237,11 @@ function goChallenges() {
     for (const ex of list) {
       const card = document.createElement("button");
       card.className = "challenge-card";
-      card.innerHTML = `<span class="challenge-kind">${ex.kind === "control" ? "Control" : "Fuerza"}</span>
+      const kindLabel = ex.combined ? "Control + Fuerza" : (ex.kind === "control" ? "Control" : "Fuerza");
+      card.innerHTML = `<span class="challenge-kind">${kindLabel}</span>
         <span class="challenge-topic">${GROUP_LABELS[ex.group] || ex.group}</span>
         <span class="challenge-name">${ex.title}</span>`;
-      card.addEventListener("click", () => goWiring(ex.id));
+      card.addEventListener("click", () => (ex.combined ? goWiringCombined(ex.id) : goWiring(ex.id)));
       row.appendChild(card);
     }
     box.appendChild(row);
@@ -477,6 +492,136 @@ function goWiring(exId) {
   });
 }
 
+/* ---------------- Pantalla de cableado combinada (control + fuerza) ---------------- */
+
+// exercises with `combined: true` show both circuits side by side, wired
+// and validated independently, but sharing one panel 3D and one guided
+// simulation — so the same references (K1, F2...) are visibly the same
+// physical devices in both drawings.
+function goWiringCombined(exId) {
+  const exercise = EXERCISES.find((e) => e.id === exId);
+  crumb.textContent = exercise.title;
+  useTemplate("tpl-wiring-combined");
+  document.getElementById("wiringc-title").textContent = exercise.title;
+  document.getElementById("wiringc-brief").textContent = exercise.brief;
+  const statusEl = document.getElementById("wiringc-status");
+  const statusC = document.getElementById("wiringc-status-c");
+  const statusP = document.getElementById("wiringc-status-p");
+  const logEl = document.getElementById("wiringc-log");
+  const btnSim = document.getElementById("btnc-simulate");
+  const btnHint = document.getElementById("btnc-hint");
+  const panelSection = document.getElementById("panel3d-section");
+
+  let solvedOnce = false;
+  let panel3d = null;
+  let perfectC = false, perfectP = false;
+
+  function refreshPanel3D() {
+    if (panel3d) panel3d.refresh();
+  }
+
+  const dControl = new Diagram(document.getElementById("wiringc-svg-c"), exercise.control, {
+    onChange: () => { statusC.textContent = `Cables colocados: ${dControl.wireCount()}`; statusC.className = "pane-status"; },
+    onSolve: () => refreshPanel3D(),
+  });
+  const dPower = new Diagram(document.getElementById("wiringc-svg-p"), exercise.power, {
+    onChange: () => { statusP.textContent = `Cables colocados: ${dPower.wireCount()}`; statusP.className = "pane-status"; },
+  });
+
+  if (exercise.control.source) {
+    panelSection.classList.remove("hidden");
+    panel3d = buildPanel3D(document.getElementById("panel3d-box"), { ...exercise.control, title: exercise.title }, dControl);
+  } else {
+    panelSection.classList.add("hidden");
+  }
+
+  function log(msg) {
+    const p = document.createElement("div");
+    p.className = "log-line";
+    p.textContent = msg;
+    logEl.appendChild(p);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function updateOverall() {
+    if (perfectC && perfectP) {
+      statusEl.textContent = "¡Control y fuerza correctos! Ya puedes presionar los botones (arriba, en el plano, o en el panel 3D) para operar ambos circuitos en tiempo real.";
+      statusEl.className = "wiring-status status-ok";
+      btnSim.disabled = false;
+      if (!solvedOnce) { addScore(150); solvedOnce = true; }
+    } else {
+      statusEl.textContent = "Verifica el circuito de control y el de fuerza por separado — ambos deben quedar correctos para poder simular.";
+      statusEl.className = "wiring-status";
+      btnSim.disabled = true;
+    }
+  }
+
+  function bindPane(d, ex, statusPane, btnCheckId, btnUndoId, btnClearId, setPerfect) {
+    document.getElementById(btnCheckId).addEventListener("click", () => {
+      const val = d.validate();
+      d.markValidation(val);
+      if (val.perfect) {
+        statusPane.textContent = `¡Correcto! (${val.correctNets}/${val.totalNets} nodos)`;
+        statusPane.className = "pane-status status-ok";
+        setPerfect(true);
+      } else if (val.shorts > 0) {
+        statusPane.textContent = `${val.shorts} corto(s) circuito(s) no deseado(s). Revisa las terminales en rojo.`;
+        statusPane.className = "pane-status status-bad";
+        setPerfect(false);
+      } else {
+        statusPane.textContent = `Van ${val.correctNets}/${val.totalNets} nodos correctos.`;
+        statusPane.className = "pane-status status-warn";
+        setPerfect(false);
+      }
+      updateOverall();
+    });
+    document.getElementById(btnUndoId).addEventListener("click", () => {
+      if (d.undoLastWire()) {
+        statusPane.textContent = `Último cable eliminado. Cables colocados: ${d.wireCount()}`;
+      } else {
+        statusPane.textContent = "No hay cables que deshacer.";
+      }
+      statusPane.className = "pane-status";
+      setPerfect(false);
+      updateOverall();
+    });
+    document.getElementById(btnClearId).addEventListener("click", () => {
+      d.clearAll();
+      d.markValidation({ results: ex.nets.map((n) => ({ net: n, ok: false })) });
+      statusPane.textContent = "Cableado borrado.";
+      statusPane.className = "pane-status";
+      setPerfect(false);
+      updateOverall();
+    });
+  }
+
+  bindPane(dControl, exercise.control, statusC, "btnc-check-c", "btnc-undo-c", "btnc-clear-c", (v) => { perfectC = v; });
+  bindPane(dPower, exercise.power, statusP, "btnc-check-p", "btnc-undo-p", "btnc-clear-p", (v) => { perfectP = v; });
+
+  btnHint.addEventListener("click", () => {
+    const valC = dControl.validate();
+    const badC = valC.results.find((r) => !r.ok);
+    const target = badC || (dPower.validate().results.find((r) => !r.ok));
+    if (!target) { statusEl.textContent = "Ya tienes todos los nodos completos — presiona Verificar en ambos circuitos."; return; }
+    addScore(-10);
+    const owner = badC ? exercise.control : exercise.power;
+    const names = target.net.map((id) => friendlyTerminal(id, owner));
+    statusEl.textContent = `Pista (${badC ? "control" : "fuerza"}): estas terminales deben quedar unidas: ${names.join("  •  ")}`;
+    statusEl.className = "wiring-status status-warn";
+  });
+
+  btnSim.addEventListener("click", async () => {
+    btnSim.disabled = true;
+    logEl.innerHTML = "";
+    dControl.resetSimVisuals();
+    dPower.resetSimVisuals();
+    for (const step of exercise.simulation) {
+      await step.run(dControl, dPower, log);
+    }
+    btnSim.disabled = false;
+  });
+}
+
 /* ---------------- Planos de referencia ---------------- */
 
 function goPlanos() {
@@ -497,19 +642,29 @@ function goPlanos() {
     new Diagram(svg, solved, { readonly: true });
   }
 
-  EXERCISES.forEach((ex, i) => {
+  const planoEntries = [];
+  for (const ex of EXERCISES) {
+    if (ex.combined) {
+      planoEntries.push({ title: ex.title + " — Control", ex: ex.control });
+      planoEntries.push({ title: ex.title + " — Fuerza", ex: ex.power });
+    } else {
+      planoEntries.push({ title: ex.title, ex });
+    }
+  }
+
+  planoEntries.forEach((entry, i) => {
     const item = document.createElement("button");
     item.className = "planos-item";
-    item.textContent = ex.title;
+    item.textContent = entry.title;
     item.addEventListener("click", () => {
       list.querySelectorAll(".planos-item").forEach((el, idx) => el.classList.toggle("active", idx === i));
-      show(ex);
+      show(entry.ex);
     });
     list.appendChild(item);
   });
 
   list.querySelector(".planos-item").classList.add("active");
-  show(EXERCISES[0]);
+  show(planoEntries[0].ex);
 }
 
 /* ---------------- Quiz ---------------- */
