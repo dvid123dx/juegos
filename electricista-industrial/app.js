@@ -24,6 +24,8 @@ const GROUP_LABELS = {
   variador: "Variador de Frecuencia (VFD)",
   chopper: "Motor DC con Chopper",
   botoneras: "Control Multi-Estación (Botoneras)",
+  "arranque-suave": "Arrancador Suave (Soft Starter)",
+  secuencial: "Arranque Secuencial de Motores",
 };
 
 function clearApp() {
@@ -106,6 +108,8 @@ function faceHTML(face) {
       return `<div class="f-body f-motor"><div class="f-motorbody"><span>M</span><span class="f-tilde">=</span></div><div class="f-tbox">A1&nbsp;&nbsp;&nbsp;A2</div></div>`;
     case "selector-2pos":
       return `<div class="f-body f-selector"><div class="f-knob f-knob-selector"></div><div class="f-termrow">0 · 1</div></div>`;
+    case "softstarter":
+      return `<div class="f-body f-vfd"><div class="f-vfd-screen">100 %V</div><div class="f-ss-ramp"></div><div class="f-termrow">L1 L2 L3 · T1 T2 T3</div></div>`;
     default:
       return `<div class="f-body"></div>`;
   }

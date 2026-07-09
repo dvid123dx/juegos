@@ -841,10 +841,196 @@ const twoStationControl = {
   ],
 };
 
+/* =========================================================
+   EJERCICIO 16: Arrancador Suave (Soft Starter) — CONTROL
+   ========================================================= */
+
+const softStarterControl = {
+  id: "softstarter-control",
+  group: "arranque-suave",
+  kind: "control",
+  title: "Arrancador Suave — Circuito de Control",
+  brief: "Habilita el arrancador suave con un arranque-paro sellado. Un temporizador (KT) cuenta la rampa de aceleración y, al vencer, cierra el contactor de bypass (ahorra pérdidas del SCR); el arrancador suave permanece habilitado incluso con el bypass cerrado.",
+  vb: [640, 560],
+  source: ["railL"],
+  return: ["railN"],
+  components: [
+    railComp("railL", true, 500, "L", 300, 60),
+    railComp("railN", true, 500, "N", 300, 500),
+    C("F2", "F2 térmico", TPL.contact("NC", "95-96", "95", "96"), 220, 130),
+    C("S0", "S0 Paro", TPL.button("NC", "1-2", "1", "2"), 220, 210, { manual: true }),
+    C("S1", "S1 Marcha", TPL.button("NO", "3-4", "3", "4"), 170, 300, { manual: true }),
+    C("SSaux1", "SS (sello)", TPL.contact("NO", "13-14", "13", "14"), 270, 300, { derivedFrom: "SScoil" }),
+    C("SScoil", "ARR.SUAVE", TPL.coil("SS", "habilita"), 220, 400),
+    C("KTcoil", "KT", TPL.coil("KT", "rampa"), 340, 400),
+    C("KTno", "KT (rampa)", TPL.contact("NO", "15-18", "15", "18"), 460, 340, { timedFrom: { coil: "KTcoil", delayMs: 3500 } }),
+    C("BYPcoil", "BYPASS", TPL.coil("BYP", "ahorro"), 460, 460),
+    C("SSaux2", "SS", TPL.contact("NO", "23-24", "23", "24"), 560, 150),
+    C("H1", "H1 marcha", TPL.lamp("H1", "green"), 560, 240),
+    C("BYPaux", "BYP", TPL.contact("NO", "23-24", "23", "24"), 640, 150, { derivedFrom: "BYPcoil" }),
+    C("H2", "H2 bypass", TPL.lamp("H2", "red"), 640, 240),
+  ],
+  nets: [
+    ["railL", "F2.95", "SSaux2.23", "BYPaux.23"],
+    ["F2.96", "S0.1"],
+    ["S0.2", "S1.3", "SSaux1.13"],
+    ["S1.4", "SSaux1.14", "SScoil.A1", "KTcoil.A1", "KTno.15"],
+    ["KTno.18", "BYPcoil.A1"],
+    ["railN", "SScoil.A2", "KTcoil.A2", "BYPcoil.A2", "H1.X2", "H2.X2"],
+    ["SSaux2.24", "H1.X1"],
+    ["BYPaux.24", "H2.X1"],
+  ],
+  simulation: [
+    logStep("Presionas S1 (marcha)..."),
+    actStep((d) => {
+      d.setClosed("S1", true);
+      d.setEnergized("SScoil", true);
+      d.setEnergized("KTcoil", true);
+      d.setClosed("SSaux1", true);
+      d.setEnergized("H1", true);
+    }, "El arrancador suave se habilita y comienza la rampa de tensión/frecuencia. KT empieza a contar.", 900),
+    actStep((d) => { d.setClosed("S1", false); }, "Sueltas S1 — se mantiene por el sello SSaux1.", 700),
+    logStep("Motor rampando (ver fuerza). KT vence su tiempo..."),
+    actStep((d) => {
+      d.setClosed("KTno", true);
+      d.setEnergized("BYPcoil", true);
+      d.setEnergized("H2", true);
+    }, "KT cierra su contacto de rampa: el contactor de bypass cierra en paralelo al SCR — ya no hay pérdidas de conmutación, pero el arrancador suave sigue habilitado (monitoreo).", 1000),
+    logStep("Presionas S0 (paro)..."),
+    actStep((d) => {
+      d.setClosed("S0", false);
+    }, "Se abre S0.", 500),
+    actStep((d) => {
+      d.setEnergized("SScoil", false);
+      d.setEnergized("KTcoil", false);
+      d.setClosed("SSaux1", false);
+      d.setClosed("KTno", false);
+      d.setEnergized("BYPcoil", false);
+      d.setEnergized("H1", false);
+      d.setEnergized("H2", false);
+    }, "Todo se desenergiza: el arrancador suave y el bypass se abren. Motor detenido.", 900),
+    actStep((d) => { d.setClosed("S0", true); }, "S0 regresa a reposo (cerrado).", 500),
+  ],
+};
+
+/* =========================================================
+   EJERCICIO 17: Arrancador Suave (Soft Starter) — FUERZA
+   ========================================================= */
+
+const softStarterPower = {
+  id: "softstarter-power",
+  group: "arranque-suave",
+  kind: "fuerza",
+  title: "Arrancador Suave — Circuito de Fuerza",
+  brief: "Conecta las 3 líneas al arrancador suave (SCR) y sus salidas, a través de los térmicos, hacia el motor. El contactor de bypass (3 polos) se conecta en PARALELO a las salidas del arrancador: cuando cierra, deriva la corriente evitando las pérdidas de los tiristores.",
+  vb: [560, 620],
+  components: [
+    railComp("railL1", true, 400, "L1", 280, 60),
+    railComp("railL2", true, 400, "L2", 280, 100),
+    railComp("railL3", true, 400, "L3", 280, 140),
+    C("SS", "Arrancador Suave", TPL.softstarter(), 280, 260),
+    C("BYPa", "BYP", TPL.pole("a", "1", "2"), 130, 380),
+    C("BYPb", "BYP", TPL.pole("b", "1", "2"), 190, 380),
+    C("BYPc", "BYP", TPL.pole("c", "1", "2"), 250, 380),
+    C("F2a", "F2", TPL.contact("NC", "1-2", "1", "2"), 380, 380),
+    C("F2b", "F2", TPL.contact("NC", "1-2", "1", "2"), 440, 380),
+    C("F2c", "F2", TPL.contact("NC", "1-2", "1", "2"), 500, 380),
+    C("M", "Motor", TPL.motor(true), 330, 500),
+  ],
+  nets: [
+    ["railL1", "SS.L1", "BYPa.1"],
+    ["railL2", "SS.L2", "BYPb.1"],
+    ["railL3", "SS.L3", "BYPc.1"],
+    ["SS.T1", "F2a.1", "BYPa.2"],
+    ["SS.T2", "F2b.1", "BYPb.2"],
+    ["SS.T3", "F2c.1", "BYPc.2"],
+    ["F2a.2", "M.U1"],
+    ["F2b.2", "M.V1"],
+    ["F2c.2", "M.W1"],
+  ],
+  simulation: [
+    logStep("SS habilita (ver control)..."),
+    actStep((d) => { d.setClosed("SS", true); }, "El arrancador suave recibe las 3 líneas y comienza a rampar la tensión hacia el motor.", 900),
+    actStep((d) => { d.setRunning("M", true); }, "El motor acelera suavemente — sin el pico de corriente de un arranque directo.", 1000),
+    logStep("KT vence su tiempo (ver control) — cierra el bypass..."),
+    actStep((d) => { d.setClosed("BYPa", true); d.setClosed("BYPb", true); d.setClosed("BYPc", true); }, "El contactor de bypass deriva la corriente por sus contactos mecánicos: ya no pasa por los tiristores.", 1000),
+  ],
+};
+
+/* =========================================================
+   EJERCICIO 18: Arranque Secuencial de 2 Motores — CONTROL
+   ========================================================= */
+
+const sequentialControl = {
+  id: "sequential-control",
+  group: "secuencial",
+  kind: "control",
+  title: "Arranque Secuencial de 2 Motores — Circuito de Control",
+  brief: "El Motor 2 sólo puede arrancar si el Motor 1 ya está en marcha (enclavamiento por secuencia): el contacto auxiliar K1 (permiso) va en serie en el circuito de marcha de S2. El paro S0 es compartido y detiene ambos motores.",
+  vb: [900, 560],
+  source: ["railL"],
+  return: ["railN"],
+  components: [
+    railComp("railL", true, 760, "L", 300, 60),
+    railComp("railN", true, 760, "N", 300, 500),
+    C("F2", "F2 térmico", TPL.contact("NC", "95-96", "95", "96"), 220, 130),
+    C("S0", "S0 Paro (ambos)", TPL.button("NC", "1-2", "1", "2"), 220, 200, { manual: true }),
+    C("S1", "S1 Marcha M1", TPL.button("NO", "3-4", "3", "4"), 160, 300, { manual: true }),
+    C("K1aux1seal", "K1 (sello)", TPL.contact("NO", "13-14", "13", "14"), 300, 300, { derivedFrom: "K1coil" }),
+    C("K1coil", "K1", TPL.coil("K1", "motor 1"), 220, 400),
+    C("K1auxRun", "K1 (permiso M2)", TPL.contact("NO", "23-24", "23", "24"), 480, 220, { derivedFrom: "K1coil" }),
+    C("S2", "S2 Marcha M2", TPL.button("NO", "3-4", "3", "4"), 620, 300, { manual: true }),
+    C("K2aux1seal", "K2 (sello)", TPL.contact("NO", "13-14", "13", "14"), 760, 300, { derivedFrom: "K2coil" }),
+    C("K2coil", "K2", TPL.coil("K2", "motor 2"), 690, 400),
+  ],
+  nets: [
+    ["railL", "F2.95"],
+    ["F2.96", "S0.1"],
+    ["S0.2", "S1.3", "K1aux1seal.13", "K1auxRun.23"],
+    ["S1.4", "K1aux1seal.14", "K1coil.A1"],
+    ["K1auxRun.24", "S2.3", "K2aux1seal.13"],
+    ["S2.4", "K2aux1seal.14", "K2coil.A1"],
+    ["railN", "K1coil.A2", "K2coil.A2"],
+  ],
+  simulation: [
+    logStep("Presionas S2 (marcha Motor 2) SIN arrancar Motor 1 primero..."),
+    actStep((d) => { d.setClosed("S2", true); }, "S2 se presiona, pero K1auxRun sigue abierto: no llega tensión, K2 NO energiza.", 900),
+    actStep((d) => { d.setClosed("S2", false); }, "Sueltas S2. Nada ocurrió — es necesario arrancar Motor 1 primero.", 700),
+    logStep("Presionas S1 (marcha Motor 1)..."),
+    actStep((d) => {
+      d.setClosed("S1", true);
+      d.setEnergized("K1coil", true);
+      d.setClosed("K1aux1seal", true);
+      d.setClosed("K1auxRun", true);
+    }, "K1 energiza y sella. Su contacto de permiso K1auxRun cierra, habilitando el arranque de Motor 2.", 900),
+    actStep((d) => { d.setClosed("S1", false); }, "Sueltas S1. Motor 1 en marcha.", 700),
+    logStep("Ahora presionas S2 (marcha Motor 2)..."),
+    actStep((d) => {
+      d.setClosed("S2", true);
+      d.setEnergized("K2coil", true);
+      d.setClosed("K2aux1seal", true);
+    }, "Ahora sí: K2 energiza — Motor 2 arranca porque Motor 1 ya estaba corriendo.", 900),
+    actStep((d) => { d.setClosed("S2", false); }, "Sueltas S2. Ambos motores en marcha.", 700),
+    logStep("Presionas S0 (paro general)..."),
+    actStep((d) => {
+      d.setClosed("S0", false);
+    }, "Se abre el paro compartido.", 500),
+    actStep((d) => {
+      d.setEnergized("K1coil", false);
+      d.setClosed("K1aux1seal", false);
+      d.setClosed("K1auxRun", false);
+      d.setEnergized("K2coil", false);
+      d.setClosed("K2aux1seal", false);
+    }, "Ambos contactores se desenergizan simultáneamente. Los dos motores se detienen.", 900),
+    actStep((d) => { d.setClosed("S0", true); }, "S0 regresa a reposo (cerrado).", 500),
+  ],
+};
+
 const EXERCISES = [
   dolControl, dolPower, revControl, ydControl, ydPower, autoControl, autoPower,
   twoSpeedControl, twoSpeedPower, alarmControl,
   vfdControl, vfdPower, chopperControl, chopperPower, twoStationControl,
+  softStarterControl, softStarterPower, sequentialControl,
 ];
 
 /* =========================================================
@@ -947,6 +1133,11 @@ const EXPLORER = [
     desc: "Interruptor de mando que permanece fijo en la posición elegida (a diferencia de un pulsador con resorte). Se usa para señales de mando mantenidas, como la orden de marcha de un variador de frecuencia.",
     face: "selector-2pos",
   },
+  {
+    id: "softstarter", name: "Arrancador Suave (Soft Starter)", tag: "L1 L2 L3 / T1 T2 T3",
+    desc: "Regula la tensión aplicada al motor mediante tiristores (SCR) en antiparalelo por fase, rampando el voltaje de forma gradual para reducir la corriente y el golpe mecánico de arranque. Al terminar la rampa, un contactor de bypass suele derivar la corriente para ahorrar las pérdidas de conmutación de los tiristores.",
+    face: "softstarter",
+  },
 ];
 
 /* =========================================================
@@ -988,4 +1179,8 @@ const QUIZ = [
   { q: "En un control desde dos botoneras (local y remota), ¿por qué los dos botones de PARO se conectan en serie?", a: ["Para que ninguno funcione", "Para que basta con presionar cualquiera de los dos para detener el motor (seguridad)", "Para que se necesiten los dos al mismo tiempo para parar", "Es indiferente, podrían ir en paralelo"], correct: 1 },
   { q: "En ese mismo control desde dos botoneras, ¿por qué los botones de MARCHA se conectan en paralelo?", a: ["Para que se necesiten los dos al mismo tiempo para arrancar", "Para poder arrancar el motor desde cualquiera de las dos ubicaciones", "Porque así protegen contra sobrecarga", "Es un error, deberían ir en serie"], correct: 1 },
   { q: "¿Qué diferencia hay entre un selector de 2 posiciones (enclavado) y un pulsador normal?", a: ["Ninguna, son el mismo componente", "El selector se queda fijo en la posición elegida; el pulsador regresa solo por resorte al soltarlo", "El selector no puede usarse en circuitos de control", "El pulsador siempre es normalmente cerrado"], correct: 1 },
+  { q: "¿Cómo regula la tensión un arrancador suave (soft starter)?", a: ["Con un devanado adicional en el motor", "Mediante tiristores (SCR) en antiparalelo por fase que rampan gradualmente el voltaje aplicado", "Cambiando la frecuencia de línea", "Con un autotransformador de derivaciones fijas"], correct: 1 },
+  { q: "¿Para qué sirve el contactor de bypass en un arrancador suave?", a: ["Para invertir el sentido de giro", "Para derivar la corriente por contactos mecánicos una vez terminada la rampa, evitando las pérdidas de conmutación de los tiristores", "Para proteger contra sobrecarga", "Para medir la velocidad del motor"], correct: 1 },
+  { q: "En un arranque secuencial de dos motores, ¿qué garantiza que el Motor 2 no pueda arrancar antes que el Motor 1?", a: ["Un temporizador en la bobina de K2", "Un contacto auxiliar NA de K1 (permiso) en serie dentro del circuito de marcha de K2", "El relé térmico del Motor 2", "No hay forma de garantizarlo eléctricamente"], correct: 1 },
+  { q: "En ese mismo arranque secuencial, ¿por qué el botón de paro (S0) es compartido entre ambos motores?", a: ["Para ahorrar cableado únicamente", "Para poder detener ambos motores de forma segura con una sola orden, sin importar cuál esté corriendo", "Porque los motores no pueden tener paros independientes", "Es un error de diseño común"], correct: 1 },
 ];

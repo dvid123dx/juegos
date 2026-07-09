@@ -451,6 +451,29 @@ TPL.vfd = () => ({
   },
 });
 
+TPL.softstarter = () => ({
+  w: 90, h: 110,
+  terminals: {
+    L1: { x: -24, y: -46 }, L2: { x: 0, y: -46 }, L3: { x: 24, y: -46 },
+    T1: { x: -24, y: 46 }, T2: { x: 0, y: 46 }, T3: { x: 24, y: 46 },
+  },
+  draw(g) {
+    for (const dx of [-24, 0, 24]) {
+      g.appendChild(svgEl("line", { x1: dx, y1: -46, x2: dx, y2: -36, class: "cable-core" }));
+      g.appendChild(svgEl("line", { x1: dx, y1: 36, x2: dx, y2: 46, class: "cable-core" }));
+    }
+    isoBox(g, 0, 0, 76, 84, 6, 9, "vfd-body", "vfd-top", "vfd-side");
+    g.appendChild(svgEl("rect", { x: -30, y: -26, width: 60, height: 22, rx: 2, class: "vfd-screen" }));
+    g.appendChild(text(0, -14, "100 %V", "vfd-readout"));
+    g.appendChild(svgEl("path", { d: "M-24,20 L-8,20 L10,4", class: "ss-ramp" }));
+    g.appendChild(svgEl("circle", { cx: 10, cy: 4, r: 2, class: "vfd-bar" }));
+    g.appendChild(text(0, 34, "ARR. SUAVE", "nameplate-sub"));
+    for (const dx of [-24, 0, 24]) { screwAt(g, dx, -46, 5.5); screwAt(g, dx, 46, 5.5); }
+    g.appendChild(text(0, -56, "L1  L2  L3", "sym-label-small"));
+    g.appendChild(text(0, 62, "T1  T2  T3", "sym-label-small"));
+  },
+});
+
 TPL.chopper = () => ({
   w: 70, h: 92,
   terminals: {

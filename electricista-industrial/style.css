@@ -130,6 +130,7 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .f-vfd-bars span:nth-child(4) { height: 18px; }
 .f-vfd-bars span:nth-child(5) { height: 20px; }
 .f-chopper-icon { color: #ffd54f; font-family: monospace; font-weight: 700; font-size: 14px; }
+.f-ss-ramp { width: 44px; height: 20px; background: linear-gradient(115deg, transparent 48%, #43ff8f 50%, transparent 52%), #06140f; border-radius: 3px; border: 1px solid #0d1526; }
 
 .f-lamp { background: #1c2740; width: 85%; height: 85%; border-radius: 10px; }
 .f-bulb { width: 50px; height: 50px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff2b0, #f2a900); box-shadow: 0 0 24px rgba(255,200,50,0.7); }
@@ -306,6 +307,7 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .vfd-screen { fill: #06140f; stroke: #0d1526; stroke-width: 1; }
 .vfd-readout { fill: #43ff8f; font-size: 11px; font-family: monospace; font-weight: 700; text-anchor: middle; }
 .vfd-bar { fill: #43ff8f; opacity: 0.85; }
+.ss-ramp { stroke: #43ff8f; stroke-width: 2; fill: none; stroke-linecap: round; }
 .chopper-pwm { fill: #ffd54f; opacity: 0.9; }
 
 /* selector de dos posiciones enclavado */
