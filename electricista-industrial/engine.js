@@ -534,8 +534,11 @@ TPL.selector = (ref, t1, t2) => ({
   draw(g) {
     contactGap(g, "NO", -23, 23);
     g.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 11, class: "sel-body" }));
-    g.appendChild(svgEl("line", { x1: 0, y1: 0, x2: 0, y2: -9, class: "sel-pointer btn-pressable" }));
+    g.appendChild(svgEl("line", { x1: 0, y1: 0, x2: 0, y2: -9, class: "sel-pointer" }));
     g.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 2.4, class: "sel-hub" }));
+    // the visible knob/pointer is tiny (a 9px line) — click anywhere on the
+    // whole knob face instead of having to hit that thin line exactly
+    g.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 16, class: "sel-hit btn-pressable" }));
     g.appendChild(text(17, 3, ref, "sym-ref", "start"));
   },
 });

@@ -315,6 +315,7 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .sel-pointer { stroke: #1a2338; stroke-width: 3; stroke-linecap: round; transform-box: fill-box; transform-origin: center; transition: transform 0.15s; }
 .component.closed .sel-pointer { transform: rotate(90deg); stroke: #0a4a26; }
 .sel-hub { fill: #333d54; }
+.sel-hit { fill: transparent; stroke: none; pointer-events: all; }
 
 /* terminales interactivos: anillo de estado sobre el tornillo real */
 .terminal { fill: transparent; stroke: transparent; stroke-width: 3; cursor: pointer; transition: stroke 0.15s; }

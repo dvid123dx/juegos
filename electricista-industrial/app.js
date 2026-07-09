@@ -324,7 +324,13 @@ function buildPanel3D(box, exercise, diagram) {
   function applyRot() { box.style.transform = `scale(${scale}) rotateX(${rotX}deg) rotateY(${rotY}deg)`; }
   applyRot();
   let dragging = false, lastX = 0, lastY = 0;
-  stage.addEventListener("pointerdown", (e) => { dragging = true; lastX = e.clientX; lastY = e.clientY; stage.setPointerCapture(e.pointerId); });
+  stage.addEventListener("pointerdown", (e) => {
+    // don't hijack taps on the buttons/switches themselves: capturing the
+    // pointer here retargets their click/mouseup events to the stage,
+    // which silently broke every control mounted on the 3D panel
+    if (e.target.closest(".p3d-dome, .p3d-switch")) return;
+    dragging = true; lastX = e.clientX; lastY = e.clientY; stage.setPointerCapture(e.pointerId);
+  });
   stage.addEventListener("pointermove", (e) => {
     if (!dragging) return;
     rotY += (e.clientX - lastX) * 0.4;
