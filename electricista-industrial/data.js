@@ -622,9 +622,229 @@ const alarmControl = {
   ],
 };
 
+/* =========================================================
+   EJERCICIO 11: Variador de Frecuencia — CONTROL
+   ========================================================= */
+
+const vfdControl = {
+  id: "vfd-control",
+  group: "variador",
+  kind: "control",
+  title: "Arranque con Variador de Frecuencia — Circuito de Control",
+  brief: "Los variadores modernos aceptan señales de mando simples: cablea el selector SEL1 (marcha/paro) y SEL2 (adelante/reversa) directo a las entradas digitales del variador — sin sello ni enclavamiento, porque el propio variador gestiona la transición de forma segura.",
+  vb: [640, 520],
+  source: ["railL"],
+  return: ["railN"],
+  components: [
+    railComp("railL", true, 500, "L", 340, 50),
+    railComp("railN", true, 500, "N", 340, 460),
+    C("F2", "F2 térmico", TPL.contact("NC", "95-96", "95", "96"), 260, 110),
+    C("SEL1", "SEL1 Marcha/Paro", TPL.selector("0-1", "0", "1"), 220, 190, { toggle: true }),
+    C("SEL2", "SEL2 Adel./Rev.", TPL.selector("0-1", "0", "1"), 420, 190, { toggle: true }),
+    C("VFDRUNaux", "VFD", TPL.contact("NO", "13-14", "13", "14"), 150, 190),
+    C("VFDDIRaux", "VFD", TPL.contact("NO", "13-14", "13", "14"), 500, 190),
+    C("VFDRUNcoil", "VFD", TPL.coil("VFD", "marcha"), 220, 300),
+    C("VFDDIRcoil", "VFD", TPL.coil("VFD", "reversa"), 420, 300),
+    C("H1", "H1 marcha", TPL.lamp("H1", "green"), 150, 390),
+    C("H2", "H2 reversa", TPL.lamp("H2", "red"), 500, 390),
+  ],
+  nets: [
+    ["railL", "F2.95", "VFDRUNaux.13", "VFDDIRaux.13"],
+    ["F2.96", "SEL1.0", "SEL2.0"],
+    ["SEL1.1", "VFDRUNcoil.A1"],
+    ["SEL2.1", "VFDDIRcoil.A1"],
+    ["VFDRUNaux.14", "H1.X1"],
+    ["VFDDIRaux.14", "H2.X1"],
+    ["railN", "VFDRUNcoil.A2", "VFDDIRcoil.A2", "H1.X2", "H2.X2"],
+  ],
+  simulation: [
+    logStep("Giras SEL1 a la posición 'Marcha'..."),
+    actStep((d) => { d.setClosed("SEL1", true); d.setEnergized("VFDRUNcoil", true); d.setEnergized("H1", true); }, "El variador recibe la orden de marcha (entrada digital activa).", 900),
+    actStep((d) => { d.setRunning("M", true); }, "El variador rampa la velocidad — motor en marcha (ver fuerza).", 900),
+    logStep("Giras SEL2 a 'Reversa'..."),
+    actStep((d) => { d.setClosed("SEL2", true); d.setEnergized("VFDDIRcoil", true); d.setEnergized("H2", true); }, "El variador invierte la secuencia internamente — sin contactores de por medio.", 900),
+  ],
+};
+
+/* =========================================================
+   EJERCICIO 12: Variador de Frecuencia — FUERZA
+   ========================================================= */
+
+const vfdPower = {
+  id: "vfd-power",
+  group: "variador",
+  kind: "fuerza",
+  title: "Arranque con Variador de Frecuencia — Circuito de Fuerza",
+  brief: "Conecta L1-L2-L3 a través del guardamotor Q1 hacia las entradas del variador, y de sus salidas U-V-W directo al motor. Un variador sustituye por completo al arreglo de contactores de un arranque a tensión reducida.",
+  vb: [560, 560],
+  components: [
+    railComp("railL1", true, 420, "L1", 300, 50),
+    railComp("railL2", true, 420, "L2", 300, 90),
+    railComp("railL3", true, 420, "L3", 300, 130),
+    C("Q1a", "Q1", TPL.pole("1-2", "1", "2"), 220, 210),
+    C("Q1b", "Q1", TPL.pole("3-4", "3", "4"), 300, 210),
+    C("Q1c", "Q1", TPL.pole("5-6", "5", "6"), 380, 210),
+    C("VFD", "Variador", TPL.vfd(), 300, 340),
+    C("M", "Motor", TPL.motor(true), 300, 480),
+  ],
+  nets: [
+    ["railL1", "Q1a.1"],
+    ["railL2", "Q1b.3"],
+    ["railL3", "Q1c.5"],
+    ["Q1a.2", "VFD.L1"],
+    ["Q1b.4", "VFD.L2"],
+    ["Q1c.6", "VFD.L3"],
+    ["VFD.U", "M.U1"],
+    ["VFD.V", "M.V1"],
+    ["VFD.W", "M.W1"],
+  ],
+  simulation: [
+    logStep("Q1 cierra (ver control)..."),
+    actStep((d) => { d.setClosed("Q1a", true); d.setClosed("Q1b", true); d.setClosed("Q1c", true); }, "Q1 energiza el variador con las 3 líneas.", 900),
+    actStep((d) => { d.setRunning("M", true); }, "El variador rampa la frecuencia de 0 a 60 Hz: arranque suave, sin picos de corriente.", 1100),
+  ],
+};
+
+/* =========================================================
+   EJERCICIO 13: Motor DC con Chopper — CONTROL
+   ========================================================= */
+
+const chopperControl = {
+  id: "chopper-control",
+  group: "chopper",
+  kind: "control",
+  title: "Motor DC con Chopper — Circuito de Control",
+  brief: "Cablea el clásico arranque-paro con sello para habilitar el chopper: S0 (paro), S1 (marcha), el contacto de sello y la bobina que habilita el módulo. El chopper regula internamente el voltaje de armadura mediante PWM.",
+  vb: [560, 560],
+  source: ["railL"],
+  return: ["railN"],
+  components: [
+    railComp("railL", true, 420, "L", 300, 60),
+    railComp("railN", true, 420, "N", 300, 500),
+    C("F2", "F2 térmico", TPL.contact("NC", "95-96", "95", "96"), 220, 130),
+    C("S0", "S0 Paro", TPL.button("NC", "1-2", "1", "2"), 220, 210, { manual: true }),
+    C("S1", "S1 Marcha", TPL.button("NO", "3-4", "3", "4"), 170, 300, { manual: true }),
+    C("CHaux1", "CH (sello)", TPL.contact("NO", "13-14", "13", "14"), 270, 300, { derivedFrom: "CHcoil" }),
+    C("CHcoil", "CHOPPER", TPL.coil("CH", "habilita"), 220, 400),
+    C("CHaux2", "CH", TPL.contact("NO", "23-24", "23", "24"), 400, 150, { derivedFrom: "CHcoil" }),
+    C("H1", "H1 marcha", TPL.lamp("H1", "green"), 400, 240),
+    C("CHaux3", "CH", TPL.contact("NC", "21-22", "21", "22"), 480, 150, { derivedFrom: "CHcoil" }),
+    C("H2", "H2 paro", TPL.lamp("H2", "red"), 480, 240),
+  ],
+  nets: [
+    ["railL", "F2.95", "CHaux2.23", "CHaux3.21"],
+    ["F2.96", "S0.1"],
+    ["S0.2", "S1.3", "CHaux1.13"],
+    ["S1.4", "CHaux1.14", "CHcoil.A1"],
+    ["railN", "CHcoil.A2", "H1.X2", "H2.X2"],
+    ["CHaux2.24", "H1.X1"],
+    ["CHaux3.22", "H2.X1"],
+  ],
+  simulation: [
+    logStep("Presionas S1 (marcha)..."),
+    actStep((d) => {
+      d.setClosed("S1", true);
+      d.setEnergized("CHcoil", true);
+      d.setClosed("CHaux1", true);
+      d.setClosed("CHaux2", true);
+      d.setClosed("CHaux3", false);
+      d.setEnergized("H1", true);
+      d.setEnergized("H2", false);
+    }, "El chopper queda habilitado y modula el PWM hacia la armadura.", 900),
+    actStep((d) => { d.setClosed("S1", false); }, "Sueltas S1 — la habilitación se mantiene por el sello.", 800),
+    logStep("Motor DC en marcha (ver fuerza). Presionas S0..."),
+    actStep((d) => {
+      d.setEnergized("CHcoil", false);
+      d.setClosed("CHaux1", false);
+      d.setClosed("CHaux2", false);
+      d.setClosed("CHaux3", true);
+      d.setEnergized("H1", false);
+      d.setEnergized("H2", true);
+    }, "El chopper se deshabilita. El motor DC se detiene.", 900),
+  ],
+};
+
+/* =========================================================
+   EJERCICIO 14: Motor DC con Chopper — FUERZA
+   ========================================================= */
+
+const chopperPower = {
+  id: "chopper-power",
+  group: "chopper",
+  kind: "fuerza",
+  title: "Motor DC con Chopper — Circuito de Fuerza",
+  brief: "Conecta la fuente DC (L+/L-) a través del interruptor BRK hacia las entradas del chopper, y sus salidas (A+/A-) al motor DC. El chopper recorta (\"chopea\") el voltaje mediante PWM para regular la velocidad.",
+  vb: [500, 560],
+  components: [
+    railComp("railLp", true, 340, "L+", 260, 60),
+    railComp("railLm", true, 340, "L-", 260, 100),
+    C("BRKp", "BRK", TPL.pole("+", "1", "2"), 200, 190),
+    C("BRKm", "BRK", TPL.pole("-", "1", "2"), 320, 190),
+    C("CH", "Chopper", TPL.chopper(), 260, 320),
+    C("M", "Motor DC", TPL.motorDC(), 260, 450),
+  ],
+  nets: [
+    ["railLp", "BRKp.1"],
+    ["railLm", "BRKm.1"],
+    ["BRKp.2", "CH.Lp"],
+    ["BRKm.2", "CH.Lm"],
+    ["CH.Ap", "M.A1"],
+    ["CH.Am", "M.A2"],
+  ],
+  simulation: [
+    logStep("BRK cierra (ver control)..."),
+    actStep((d) => { d.setClosed("BRKp", true); d.setClosed("BRKm", true); }, "El chopper recibe la alimentación DC.", 900),
+    actStep((d) => { d.setRunning("M", true); }, "El chopper module el ancho de pulso: motor DC gira a la velocidad de referencia.", 1000),
+  ],
+};
+
+/* =========================================================
+   EJERCICIO 15: Control desde Dos Botoneras — CONTROL
+   ========================================================= */
+
+const twoStationControl = {
+  id: "twostation-control",
+  group: "botoneras",
+  kind: "control",
+  title: "Control desde Dos Botoneras — Circuito de Control",
+  brief: "Arranque directo controlado desde dos ubicaciones: los paros (S0 local y S0 remoto) van en SERIE — cualquiera detiene el motor — y las marchas (S1 local y S1 remoto) van en PARALELO — cualquiera lo arranca. Comparte el mismo circuito de fuerza que el arranque directo.",
+  vb: [700, 560],
+  source: ["railL"],
+  return: ["railN"],
+  components: [
+    railComp("railL", true, 560, "L", 360, 60),
+    railComp("railN", true, 560, "N", 360, 500),
+    C("F2", "F2 térmico", TPL.contact("NC", "95-96", "95", "96"), 260, 130),
+    C("S0a", "S0 Paro (local)", TPL.button("NC", "1-2", "1", "2"), 260, 210, { manual: true }),
+    C("S0b", "S0 Paro (remoto)", TPL.button("NC", "1-2", "1", "2"), 260, 290, { manual: true }),
+    C("S1a", "S1 Marcha (local)", TPL.button("NO", "3-4", "3", "4"), 460, 210, { manual: true }),
+    C("S1b", "S1 Marcha (remoto)", TPL.button("NO", "3-4", "3", "4"), 460, 290, { manual: true }),
+    C("K1aux1", "K1 (sello)", TPL.contact("NO", "13-14", "13", "14"), 580, 250, { derivedFrom: "K1coil" }),
+    C("K1coil", "K1", TPL.coil("K1", "contactor"), 400, 400),
+  ],
+  nets: [
+    ["railL", "F2.95"],
+    ["F2.96", "S0a.1"],
+    ["S0a.2", "S0b.1"],
+    ["S0b.2", "S1a.3", "S1b.3", "K1aux1.13"],
+    ["S1a.4", "S1b.4", "K1aux1.14", "K1coil.A1"],
+    ["railN", "K1coil.A2"],
+  ],
+  simulation: [
+    logStep("Presionas S1 remoto (marcha)..."),
+    actStep((d) => { d.setClosed("S1b", true); d.setEnergized("K1coil", true); d.setClosed("K1aux1", true); }, "K1 se energiza — se puede haber presionado cualquiera de las dos marchas.", 900),
+    actStep((d) => { d.setClosed("S1b", false); }, "Motor en marcha, sellado por 13-14.", 700),
+    logStep("Presionas S0 local (paro)..."),
+    actStep((d) => { d.setClosed("S0a", false); }, "Basta con abrir CUALQUIERA de los dos paros en serie para detener el motor.", 700),
+    actStep((d) => { d.setEnergized("K1coil", false); d.setClosed("K1aux1", false); }, "K1 se desenergiza. Motor detenido.", 900),
+    actStep((d) => { d.setClosed("S0a", true); }, "S0 local regresa a reposo (cerrado).", 500),
+  ],
+};
+
 const EXERCISES = [
   dolControl, dolPower, revControl, ydControl, ydPower, autoControl, autoPower,
   twoSpeedControl, twoSpeedPower, alarmControl,
+  vfdControl, vfdPower, chopperControl, chopperPower, twoStationControl,
 ];
 
 /* =========================================================
@@ -707,6 +927,26 @@ const EXPLORER = [
     desc: "Igual que un contactor pero sin contactos de potencia: multiplica y aísla señales de control cuando se necesitan más contactos auxiliares de los que trae un contactor, o para separar niveles de tensión.",
     face: "rele-auxiliar",
   },
+  {
+    id: "vfd", name: "Variador de Frecuencia (VFD)", tag: "L1 L2 L3 / U V W",
+    desc: "Convierte la tensión de línea a una frecuencia y voltaje variables (rectificador + bus DC + inversor IGBT), permitiendo arrancar y regular la velocidad del motor de forma suave, sin los contactores de un arranque a tensión reducida.",
+    face: "vfd",
+  },
+  {
+    id: "chopper", name: "Chopper (Convertidor DC-DC)", tag: "L+ L- / A+ A-",
+    desc: "Recorta ('chopea') un voltaje DC fijo mediante conmutación PWM de alta frecuencia, entregando un voltaje DC promedio variable a la armadura de un motor DC para regular su velocidad.",
+    face: "chopper",
+  },
+  {
+    id: "motor-dc", name: "Motor de Corriente Directa", tag: "A1 / A2",
+    desc: "Motor DC de dos terminales de armadura. Su velocidad es proporcional al voltaje aplicado, por lo que se regula fácilmente con un chopper o un rectificador controlado, sin necesidad de variar la frecuencia.",
+    face: "motor-dc",
+  },
+  {
+    id: "selector-2pos", name: "Selector de 2 Posiciones (enclavado)", tag: "SEL",
+    desc: "Interruptor de mando que permanece fijo en la posición elegida (a diferencia de un pulsador con resorte). Se usa para señales de mando mantenidas, como la orden de marcha de un variador de frecuencia.",
+    face: "selector-2pos",
+  },
 ];
 
 /* =========================================================
@@ -742,4 +982,10 @@ const QUIZ = [
   { q: "¿Por qué un motor de dos velocidades normalmente lleva DOS relés térmicos distintos?", a: ["Por error de diseño", "Porque cada velocidad tiene una corriente nominal distinta y necesita su propio ajuste de protección", "Porque los térmicos se dañan rápido", "No es cierto, siempre se usa uno solo"], correct: 1 },
   { q: "¿Qué función cumple un interruptor de límite (fin de carrera) en una máquina?", a: ["Mide la temperatura del motor", "Detecta mecánicamente que una pieza móvil llegó a una posición determinada", "Reduce la tensión de arranque", "Sustituye al relé térmico"], correct: 1 },
   { q: "¿Para qué se usa un relé auxiliar de control (CR) en vez de aprovechar los contactos del propio contactor?", a: ["Para que se vea más complicado el tablero", "Cuando se necesitan más contactos auxiliares de los que trae el contactor, o para aislar niveles de tensión", "Porque los contactores no tienen bobina", "No tiene ninguna utilidad real"], correct: 1 },
+  { q: "¿Por qué un variador de frecuencia (VFD) no necesita contactores separados ni enclavamiento mecánico entre adelante y reversa?", a: ["Porque no puede invertir el giro", "Porque el propio variador gestiona la conmutación internamente de forma segura mediante software", "Porque siempre gira en un solo sentido", "Porque no lleva electrónica de potencia"], correct: 1 },
+  { q: "¿Qué hace un chopper (convertidor DC-DC) en un accionamiento de motor DC?", a: ["Convierte AC a DC únicamente", "Recorta un voltaje DC fijo mediante PWM para entregar un voltaje DC promedio variable y así regular la velocidad", "Mide la corriente del motor", "Sustituye al relé térmico"], correct: 1 },
+  { q: "¿Cuál es la ventaja principal de usar un variador de frecuencia frente a un arranque estrella-triángulo o por autotransformador?", a: ["Es siempre más barato en cualquier caso", "Permite un arranque suave con rampa de velocidad continua y control total de la velocidad en marcha, no solo al arrancar", "No requiere ningún cableado de fuerza", "Elimina la necesidad de un motor"], correct: 1 },
+  { q: "En un control desde dos botoneras (local y remota), ¿por qué los dos botones de PARO se conectan en serie?", a: ["Para que ninguno funcione", "Para que basta con presionar cualquiera de los dos para detener el motor (seguridad)", "Para que se necesiten los dos al mismo tiempo para parar", "Es indiferente, podrían ir en paralelo"], correct: 1 },
+  { q: "En ese mismo control desde dos botoneras, ¿por qué los botones de MARCHA se conectan en paralelo?", a: ["Para que se necesiten los dos al mismo tiempo para arrancar", "Para poder arrancar el motor desde cualquiera de las dos ubicaciones", "Porque así protegen contra sobrecarga", "Es un error, deberían ir en serie"], correct: 1 },
+  { q: "¿Qué diferencia hay entre un selector de 2 posiciones (enclavado) y un pulsador normal?", a: ["Ninguna, son el mismo componente", "El selector se queda fijo en la posición elegida; el pulsador regresa solo por resorte al soltarlo", "El selector no puede usarse en circuitos de control", "El pulsador siempre es normalmente cerrado"], correct: 1 },
 ];

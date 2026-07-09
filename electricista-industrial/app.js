@@ -21,6 +21,9 @@ const GROUP_LABELS = {
   autotransformador: "Autotransformador",
   "dos-velocidades": "Motor de Dos Velocidades (Dahlander)",
   alarma: "Alarma y Sensores",
+  variador: "Variador de Frecuencia (VFD)",
+  chopper: "Motor DC con Chopper",
+  botoneras: "Control Multi-Estación (Botoneras)",
 };
 
 function clearApp() {
@@ -95,6 +98,14 @@ function faceHTML(face) {
       return `<div class="f-body f-bocina"><div class="f-horn-bell"></div><div class="f-horn-wave"></div><div class="f-horn-wave f-horn-wave2"></div></div>`;
     case "rele-auxiliar":
       return `<div class="f-body f-relay"><div class="f-coilblock"><span>A1</span><span>A2</span></div><div class="f-poles f-poles-small"><div class="f-pole"></div><div class="f-pole"></div></div><div class="f-termrow">13/14 21/22</div></div>`;
+    case "vfd":
+      return `<div class="f-body f-vfd"><div class="f-vfd-screen">60.0 Hz</div><div class="f-vfd-bars"><span></span><span></span><span></span><span></span><span></span></div><div class="f-termrow">L1 L2 L3 · U V W</div></div>`;
+    case "chopper":
+      return `<div class="f-body f-vfd"><div class="f-chopper-icon">⚡PWM</div><div class="f-termrow">L+ L- · A+ A-</div></div>`;
+    case "motor-dc":
+      return `<div class="f-body f-motor"><div class="f-motorbody"><span>M</span><span class="f-tilde">=</span></div><div class="f-tbox">A1&nbsp;&nbsp;&nbsp;A2</div></div>`;
+    case "selector-2pos":
+      return `<div class="f-body f-selector"><div class="f-knob f-knob-selector"></div><div class="f-termrow">0 · 1</div></div>`;
     default:
       return `<div class="f-body"></div>`;
   }
@@ -213,17 +224,17 @@ function goChallenges() {
 
 function buildPanel3D(box, exercise, diagram) {
   box.innerHTML = "";
-  const buttons = exercise.components.filter((c) => c.manual);
+  const controls = exercise.components.filter((c) => c.manual || c.toggle);
   const lamps = exercise.components.filter((c) => c.tpl.isLamp);
   const items = {};
 
   // size the panel to how many pieces it actually holds, with a tight,
   // constant pitch between them, instead of always stretching to a fixed
-  // width — so 2 buttons sit close together and 4 still all fit on screen
+  // width — so 2 controls sit close together and 4 still all fit on screen
   const PITCH = 92;
-  const cols = Math.max(buttons.length, lamps.length, 1);
+  const cols = Math.max(controls.length, lamps.length, 1);
   const boxW = Math.max(200, cols * PITCH + 40);
-  const rows = (buttons.length ? 1 : 0) + (lamps.length ? 1 : 0);
+  const rows = (controls.length ? 1 : 0) + (lamps.length ? 1 : 0);
   const boxH = rows >= 2 ? 178 : 110;
   box.style.width = boxW + "px";
   box.style.height = boxH + "px";
@@ -265,16 +276,28 @@ function buildPanel3D(box, exercise, diagram) {
         window.addEventListener("mouseup", release);
         dome.addEventListener("touchend", release);
         dome.addEventListener("touchcancel", release);
+      } else if (comp.toggle) {
+        el.innerHTML = `<div class="p3d-bezel"><div class="p3d-switch"><div class="p3d-switch-nub"></div></div></div><div class="p3d-caption">${comp.label}</div>`;
+        const sw = el.querySelector(".p3d-switch");
+        sw.addEventListener("click", (e) => {
+          e.preventDefault(); e.stopPropagation();
+          diagram.toggleManual(comp.id);
+        });
       } else {
         el.innerHTML = `<div class="p3d-lamp-housing"><div class="p3d-lamp-glass"></div></div><div class="p3d-caption">${comp.label}</div>`;
       }
     });
   }
 
-  place(buttons, 28);
-  place(lamps, buttons.length ? 100 : 28);
+  place(controls, 28);
+  place(lamps, controls.length ? 100 : 28);
 
   function refresh() {
+    for (const comp of controls) {
+      if (!comp.toggle) continue;
+      const el = items[comp.id];
+      if (el) el.querySelector(".p3d-switch").classList.toggle("on", diagram.isClosed(comp.id));
+    }
     for (const comp of lamps) {
       const el = items[comp.id];
       if (!el) continue;

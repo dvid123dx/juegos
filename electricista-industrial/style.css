@@ -118,6 +118,18 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .f-selector { background: #1c2740; width: 85%; height: 85%; border-radius: 10px; }
 .f-knob { width: 40px; height: 40px; background: #cfd8ea; border-radius: 6px; position: relative; }
 .f-knob::after { content: ""; position: absolute; top: 4px; left: 18px; width: 4px; height: 16px; background: #333; }
+.f-knob-selector { border-radius: 50%; }
+
+.f-vfd { background: #1c2740; width: 85%; height: 85%; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+.f-vfd-screen { background: #06140f; color: #43ff8f; font-family: monospace; font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 3px; border: 1px solid #0d1526; }
+.f-vfd-bars { display: flex; align-items: flex-end; gap: 3px; height: 20px; }
+.f-vfd-bars span { width: 6px; background: #43ff8f; display: block; }
+.f-vfd-bars span:nth-child(1) { height: 6px; }
+.f-vfd-bars span:nth-child(2) { height: 10px; }
+.f-vfd-bars span:nth-child(3) { height: 14px; }
+.f-vfd-bars span:nth-child(4) { height: 18px; }
+.f-vfd-bars span:nth-child(5) { height: 20px; }
+.f-chopper-icon { color: #ffd54f; font-family: monospace; font-weight: 700; font-size: 14px; }
 
 .f-lamp { background: #1c2740; width: 85%; height: 85%; border-radius: 10px; }
 .f-bulb { width: 50px; height: 50px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff2b0, #f2a900); box-shadow: 0 0 24px rgba(255,200,50,0.7); }
@@ -287,6 +299,21 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .wind-core { fill: url(#gShell); stroke: #0d1526; stroke-width: 1; }
 .wind-band { fill: url(#gWind); opacity: 0.85; }
 
+/* variador de frecuencia / chopper: caja de electronica de potencia */
+.vfd-body { fill: url(#gShell); stroke: #0d1526; stroke-width: 1; filter: url(#fDrop); }
+.vfd-top { fill: #aebbdf; opacity: 0.95; }
+.vfd-side { fill: #141d33; opacity: 0.95; }
+.vfd-screen { fill: #06140f; stroke: #0d1526; stroke-width: 1; }
+.vfd-readout { fill: #43ff8f; font-size: 11px; font-family: monospace; font-weight: 700; text-anchor: middle; }
+.vfd-bar { fill: #43ff8f; opacity: 0.85; }
+.chopper-pwm { fill: #ffd54f; opacity: 0.9; }
+
+/* selector de dos posiciones enclavado */
+.sel-body { fill: url(#gBezel); stroke: #4a5266; stroke-width: 0.8; filter: url(#fDrop); }
+.sel-pointer { stroke: #1a2338; stroke-width: 3; stroke-linecap: round; transform-box: fill-box; transform-origin: center; transition: transform 0.15s; }
+.component.closed .sel-pointer { transform: rotate(90deg); stroke: #0a4a26; }
+.sel-hub { fill: #333d54; }
+
 /* terminales interactivos: anillo de estado sobre el tornillo real */
 .terminal { fill: transparent; stroke: transparent; stroke-width: 3; cursor: pointer; transition: stroke 0.15s; }
 .terminal:hover { stroke: var(--accent); }
@@ -454,6 +481,19 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .p3d-dome-red { background: radial-gradient(circle at 32% 25%, #ffd4d0, #c22b2b 55%, #6b0f0a); }
 .p3d-item.pressed .p3d-dome { transform: translateZ(6px); box-shadow: 0 2px 4px rgba(0,0,0,0.5); filter: brightness(0.8); }
 
+.p3d-switch {
+  width: 30px; height: 16px; border-radius: 8px; background: #2a3350;
+  border: 1px solid #060a14; transform: translateZ(16px); cursor: pointer;
+  position: relative; transition: background 0.15s;
+}
+.p3d-switch-nub {
+  position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, #fdfdfd, #9aa4b8 55%, #565f70);
+  transition: left 0.15s;
+}
+.p3d-switch.on { background: #1c9a56; }
+.p3d-switch.on .p3d-switch-nub { left: 15px; }
+
 .p3d-lamp-housing {
   width: 44px; height: 44px; border-radius: 50%;
   background: radial-gradient(circle at 32% 28%, #e7ecf7, #7f8fae 60%, #333f5c);
@@ -469,7 +509,7 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .p3d-lamp-glass.on-green { background: radial-gradient(circle at 32% 25%, #f2fff7, #48ff96 55%, #0a8a42); box-shadow: 0 0 18px 4px rgba(72,255,150,0.75); }
 .p3d-lamp-glass.on-red { background: radial-gradient(circle at 32% 25%, #fff2f0, #ff5b50 55%, #9c0f0a); box-shadow: 0 0 18px 4px rgba(255,91,80,0.75); }
 
-.p3d-caption { transform: translateZ(6px); font-size: 10.5px; font-family: monospace; color: #dbe7ff; text-shadow: 0 1px 2px #000; white-space: nowrap; }
+.p3d-caption { transform: translateZ(6px); font-size: 9.5px; font-family: monospace; color: #dbe7ff; text-shadow: 0 1px 2px #000; white-space: normal; max-width: 88px; text-align: center; line-height: 1.15; }
 
 .p3d-nameplate {
   position: absolute; left: 50%; top: 10px; transform: translate(-50%, 0) translateZ(4px);

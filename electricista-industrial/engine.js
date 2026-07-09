@@ -143,6 +143,29 @@ function hashStr(s) {
 
 const WIRE_COLOR_COUNT = 10;
 
+// builds a path through a list of waypoints with each corner rounded off
+// (clamped to half the length of its shortest neighbouring segment) so the
+// cable reads as a real conductor with a bend radius instead of a rigid
+// schematic line snapping at right angles
+function roundedPath(points, r) {
+  if (points.length < 3) return "M" + points.map((p) => `${p.x},${p.y}`).join(" L");
+  let d = `M${points[0].x},${points[0].y}`;
+  for (let i = 1; i < points.length - 1; i++) {
+    const prev = points[i - 1], cur = points[i], next = points[i + 1];
+    const d1 = Math.hypot(cur.x - prev.x, cur.y - prev.y) || 1;
+    const d2 = Math.hypot(next.x - cur.x, next.y - cur.y) || 1;
+    const rr = Math.min(r, d1 / 2, d2 / 2);
+    const p1x = cur.x + ((prev.x - cur.x) / d1) * rr;
+    const p1y = cur.y + ((prev.y - cur.y) / d1) * rr;
+    const p2x = cur.x + ((next.x - cur.x) / d2) * rr;
+    const p2y = cur.y + ((next.y - cur.y) / d2) * rr;
+    d += ` L${p1x},${p1y} Q${cur.x},${cur.y} ${p2x},${p2y}`;
+  }
+  const last = points[points.length - 1];
+  d += ` L${last.x},${last.y}`;
+  return d;
+}
+
 /* ---------------- union-find ---------------- */
 
 class UnionFind {
@@ -401,6 +424,96 @@ TPL.autoPhase = (ref) => ({
     g.appendChild(text(-16, -42, ref + " L", "sym-label-small", "end"));
     g.appendChild(text(-16, 4, "65%", "sym-label-small", "end"));
     g.appendChild(text(-16, 48, ref + " C", "sym-label-small", "end"));
+  },
+});
+
+TPL.vfd = () => ({
+  w: 90, h: 110,
+  terminals: {
+    L1: { x: -24, y: -46 }, L2: { x: 0, y: -46 }, L3: { x: 24, y: -46 },
+    U: { x: -24, y: 46 }, V: { x: 0, y: 46 }, W: { x: 24, y: 46 },
+  },
+  draw(g) {
+    for (const dx of [-24, 0, 24]) {
+      g.appendChild(svgEl("line", { x1: dx, y1: -46, x2: dx, y2: -36, class: "cable-core" }));
+      g.appendChild(svgEl("line", { x1: dx, y1: 36, x2: dx, y2: 46, class: "cable-core" }));
+    }
+    isoBox(g, 0, 0, 76, 84, 6, 9, "vfd-body", "vfd-top", "vfd-side");
+    g.appendChild(svgEl("rect", { x: -30, y: -26, width: 60, height: 22, rx: 2, class: "vfd-screen" }));
+    g.appendChild(text(0, -14, "60.0 Hz", "vfd-readout"));
+    for (let i = 0; i < 5; i++) {
+      g.appendChild(svgEl("rect", { x: -26 + i * 12, y: 6, width: 8, height: 6 + i * 3, class: "vfd-bar" }));
+    }
+    g.appendChild(text(0, 34, "VARIADOR", "nameplate-sub"));
+    for (const dx of [-24, 0, 24]) { screwAt(g, dx, -46, 5.5); screwAt(g, dx, 46, 5.5); }
+    g.appendChild(text(0, -56, "L1  L2  L3", "sym-label-small"));
+    g.appendChild(text(0, 62, "U   V   W", "sym-label-small"));
+  },
+});
+
+TPL.chopper = () => ({
+  w: 70, h: 92,
+  terminals: {
+    Lp: { x: -16, y: -40 }, Lm: { x: 16, y: -40 },
+    Ap: { x: -16, y: 40 }, Am: { x: 16, y: 40 },
+  },
+  draw(g) {
+    for (const dx of [-16, 16]) {
+      g.appendChild(svgEl("line", { x1: dx, y1: -40, x2: dx, y2: -30, class: "cable-core" }));
+      g.appendChild(svgEl("line", { x1: dx, y1: 30, x2: dx, y2: 40, class: "cable-core" }));
+    }
+    isoBox(g, 0, 0, 56, 68, 6, 8, "vfd-body", "vfd-top", "vfd-side");
+    g.appendChild(svgEl("path", { d: "M-18,-4 L-6,-4 L-6,-12 L6,4 L-6,4 L-6,12 Z", class: "chopper-pwm" }));
+    g.appendChild(text(0, 26, "CHOPPER", "nameplate-sub"));
+    screwAt(g, -16, -40, 5.5); screwAt(g, 16, -40, 5.5);
+    screwAt(g, -16, 40, 5.5); screwAt(g, 16, 40, 5.5);
+    g.appendChild(text(-16, -46, "L+", "sym-label-small"));
+    g.appendChild(text(16, -46, "L-", "sym-label-small"));
+    g.appendChild(text(-16, 52, "A+", "sym-label-small"));
+    g.appendChild(text(16, 52, "A-", "sym-label-small"));
+  },
+});
+
+TPL.motorDC = () => ({
+  w: 90, h: 78,
+  terminals: { A1: { x: -20, y: 32 }, A2: { x: 20, y: 32 } },
+  draw(g) {
+    g.appendChild(svgEl("circle", { cx: 0, cy: -8, r: 32, class: "motor-shell", filter: "url(#fDrop)" }));
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2;
+      g.appendChild(svgEl("circle", { cx: Math.cos(a) * 27, cy: -8 + Math.sin(a) * 27, r: 2, class: "motor-bolt" }));
+    }
+    g.appendChild(svgEl("circle", { cx: 0, cy: -8, r: 20, class: "motor-face" }));
+    g.appendChild(text(0, -3, "M", "sym-motor"));
+    g.appendChild(text(0, 13, "=", "sym-label-small"));
+    const fanWrap = svgEl("g", { class: "motor-fan-wrap", transform: "translate(0,-8)" });
+    const fan = svgEl("g", { class: "motor-fan" });
+    for (let i = 0; i < 3; i++) fan.appendChild(svgEl("path", { d: "M0,0 L5,-16 Q0,-20 -5,-16 Z", transform: `rotate(${i * 120})`, class: "motor-blade" }));
+    fan.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 4, class: "motor-hub" }));
+    fanWrap.appendChild(fan);
+    g.appendChild(fanWrap);
+    g.appendChild(svgEl("line", { x1: -20, y1: 22, x2: -20, y2: 26, class: "cable-core" }));
+    g.appendChild(svgEl("line", { x1: 20, y1: 22, x2: 20, y2: 26, class: "cable-core" }));
+    g.appendChild(svgEl("rect", { x: -34, y: 26, width: 68, height: 20, rx: 3, class: "terminal-box", filter: "url(#fDrop)" }));
+    screwAt(g, -20, 32, 5.5); screwAt(g, 20, 32, 5.5);
+    g.appendChild(text(-20, 24, "A1", "sym-ref"));
+    g.appendChild(text(20, 24, "A2", "sym-ref"));
+  },
+});
+
+TPL.selector = (ref, t1, t2) => ({
+  // interruptor selector de 2 posiciones (enclavado): un clic lo deja fijo,
+  // a diferencia de un pulsador con resorte
+  w: 30, h: 46,
+  gate: true,
+  restClosed: false,
+  terminals: { [t1]: { x: 0, y: -23 }, [t2]: { x: 0, y: 23 } },
+  draw(g) {
+    contactGap(g, "NO", -23, 23);
+    g.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 11, class: "sel-body" }));
+    g.appendChild(svgEl("line", { x1: 0, y1: 0, x2: 0, y2: -9, class: "sel-pointer btn-pressable" }));
+    g.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 2.4, class: "sel-hub" }));
+    g.appendChild(text(17, 3, ref, "sym-ref", "start"));
   },
 });
 
@@ -843,7 +956,7 @@ class Diagram {
       const span = Math.max(bottom - top, 1);
       const frac = 0.12 + (h % 89) / 100; // 0.12 .. 1.00 of the span
       const jogY = Math.min(Math.max(top + span * frac, top + 4), bottom - 4);
-      d = `M${pa.x},${pa.y} L${pa.x},${jogY} L${pb.x},${jogY} L${pb.x},${pb.y}`;
+      d = roundedPath([pa, { x: pa.x, y: jogY }, { x: pb.x, y: jogY }, pb], 11);
     }
     const group = svgEl("g", { class: "wire-group" + (isStatic ? " wire-static" : "") });
     const shadow = svgEl("path", { d, class: "cable-shadow", fill: "none", transform: "translate(1.5,2.5)" });
@@ -989,6 +1102,11 @@ class Diagram {
   isEnergized(id) {
     const g = this.compGroups.get(id);
     return g ? g.classList.contains("energized") : false;
+  }
+
+  isClosed(id) {
+    const g = this.compGroups.get(id);
+    return g ? g.classList.contains("closed") : false;
   }
 
   resetSimVisuals() {
