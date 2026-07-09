@@ -953,6 +953,8 @@ class Diagram {
 
   _addWire(a, b) {
     if (a === b) return;
+    [a, b] = this._normalizeEndpoints(a, b);
+    if (a === b) return;
     const exists = this.wires.find((w) => (w.a === a && w.b === b) || (w.a === b && w.b === a));
     if (exists) { this._removeWire(exists); return; }
     this._drawWire(a, b, false);
@@ -962,7 +964,41 @@ class Diagram {
     this.onChange();
   }
 
+  // rail taps are all electrically identical, so pick whichever tap sits
+  // closest to the other end of the wire — this keeps rail drops short and
+  // near-vertical instead of an arbitrary tap forcing a long horizontal jog
+  // that crosses in front of unrelated components.
+  _nearestRailTap(railId, otherPos) {
+    const taps = this.railTapIds[railId];
+    if (!taps || !taps.length) return null;
+    let best = null, bestD = Infinity;
+    for (const tid of taps) {
+      const p = this.termPos.get(tid);
+      if (!p) continue;
+      const d = Math.hypot(p.x - otherPos.x, p.y - otherPos.y);
+      if (d < bestD) { bestD = d; best = tid; }
+    }
+    return best;
+  }
+
+  _resolveEndpoint(id, otherId) {
+    const info = this.termPos.get(id);
+    const otherInfo = this.termPos.get(otherId);
+    if (info && info.railId && otherInfo && !otherInfo.railId) {
+      const snapped = this._nearestRailTap(info.railId, otherInfo);
+      if (snapped) return snapped;
+    }
+    return id;
+  }
+
+  _normalizeEndpoints(a, b) {
+    const na = this._resolveEndpoint(a, b);
+    const nb = this._resolveEndpoint(b, na);
+    return [na, nb];
+  }
+
   _drawWire(a, b, isStatic) {
+    [a, b] = this._normalizeEndpoints(a, b);
     const pa = this.termPos.get(a), pb = this.termPos.get(b);
     if (!pa || !pb) return;
     let d;
