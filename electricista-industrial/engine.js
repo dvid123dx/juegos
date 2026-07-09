@@ -667,6 +667,16 @@ class Diagram {
     const c = svgEl("circle", { cx: info.x, cy: info.y, r: 10, class: "terminal", "data-term": id });
     c.addEventListener("click", (e) => this._onTerminalClick(id, e));
     this.gTerm.appendChild(c);
+    // print the terminal's own number/letter (13, A1, L1...) right next to
+    // its screw, so the same physical point can be recognized when it shows
+    // up again in a different diagram (e.g. K1 in the control vs. power plan)
+    if (!info.railId) {
+      const dot = id.lastIndexOf(".");
+      if (dot !== -1) {
+        const name = id.slice(dot + 1);
+        this.gTerm.appendChild(text(info.x + 13, info.y + 3, name, "term-label", "start"));
+      }
+    }
     return c;
   }
 

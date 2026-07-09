@@ -176,6 +176,13 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 
 .challenge-group { margin-bottom: 26px; }
 .challenge-group h3 { color: var(--accent2); margin-bottom: 10px; }
+.level-h {
+  display: inline-block; padding: 4px 12px; border-radius: 8px; font-size: 15px;
+  border: 1px solid var(--line);
+}
+.level-h.level-1 { color: #43ff8f; border-color: #1e5c3a; background: rgba(67,255,143,0.08); }
+.level-h.level-2 { color: #ffd54f; border-color: #6a5417; background: rgba(255,213,79,0.08); }
+.level-h.level-3 { color: #ff6b6b; border-color: #6a2020; background: rgba(255,107,107,0.08); }
 .challenge-row { display: flex; flex-wrap: wrap; gap: 12px; }
 .challenge-card {
   background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px;
@@ -187,6 +194,7 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
   align-self: flex-start; font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
   padding: 2px 8px; border-radius: 10px; background: rgba(53,209,200,0.15); color: var(--accent);
 }
+.challenge-topic { font-size: 11px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: 0.4px; }
 .challenge-name { font-size: 14.5px; font-weight: 600; }
 
 /* ---------------- wiring screen ---------------- */
@@ -323,6 +331,7 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .terminal-pending { stroke: var(--accent2); stroke-width: 3.4; }
 .terminal-ok { stroke: var(--ok); }
 .terminal-bad { stroke: var(--bad); }
+.term-label { fill: #6f83ab; font-size: 8.5px; font-family: monospace; pointer-events: none; }
 
 /* cables: tubo con sombra + nucleo + brillo + ferrulas en cada extremo, como un cable real.
    cada cable se colorea segun el nodo electrico al que pertenece (wire-c0..9)

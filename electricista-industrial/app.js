@@ -26,6 +26,13 @@ const GROUP_LABELS = {
   botoneras: "Control Multi-Estación (Botoneras)",
   "arranque-suave": "Arrancador Suave (Soft Starter)",
   secuencial: "Arranque Secuencial de Motores",
+  avanzado: "Retos Combinados",
+};
+
+const LEVEL_LABELS = {
+  1: "Nivel 1 · Básico",
+  2: "Nivel 2 · Intermedio",
+  3: "Nivel 3 · Avanzado",
 };
 
 function clearApp() {
@@ -200,21 +207,24 @@ function goChallenges() {
   crumb.textContent = "Retos de Cableado";
   useTemplate("tpl-challenges");
   const container = document.getElementById("challenge-groups");
-  const groups = {};
+  const byLevel = { 1: [], 2: [], 3: [] };
   for (const ex of EXERCISES) {
-    groups[ex.group] = groups[ex.group] || [];
-    groups[ex.group].push(ex);
+    const lvl = ex.level || 1;
+    (byLevel[lvl] = byLevel[lvl] || []).push(ex);
   }
-  for (const g in groups) {
+  for (const lvl of [1, 2, 3]) {
+    const list = byLevel[lvl];
+    if (!list || !list.length) continue;
     const box = document.createElement("div");
     box.className = "challenge-group";
-    box.innerHTML = `<h3>${GROUP_LABELS[g] || g}</h3>`;
+    box.innerHTML = `<h3 class="level-h level-${lvl}">${LEVEL_LABELS[lvl]}</h3>`;
     const row = document.createElement("div");
     row.className = "challenge-row";
-    for (const ex of groups[g]) {
+    for (const ex of list) {
       const card = document.createElement("button");
       card.className = "challenge-card";
       card.innerHTML = `<span class="challenge-kind">${ex.kind === "control" ? "Control" : "Fuerza"}</span>
+        <span class="challenge-topic">${GROUP_LABELS[ex.group] || ex.group}</span>
         <span class="challenge-name">${ex.title}</span>`;
       card.addEventListener("click", () => goWiring(ex.id));
       row.appendChild(card);
@@ -348,6 +358,20 @@ function buildPanel3D(box, exercise, diagram) {
 
 /* ---------------- Pantalla de cableado ---------------- */
 
+// turn an internal terminal id ("VFDRUNaux.13", "railL@-210,0", "K1coil.A1")
+// into something a person can actually read and match against the
+// component labels printed on the diagram ("VFD (terminal 13)", "riel L").
+function friendlyTerminal(id, exercise) {
+  const plain = id.split("@")[0];
+  const dot = plain.indexOf(".");
+  const compId = dot === -1 ? plain : plain.slice(0, dot);
+  const term = dot === -1 ? null : plain.slice(dot + 1);
+  const comp = exercise.components.find((c) => c.id === compId);
+  if (comp && comp.tpl && comp.tpl.isRail) return `riel ${compId.replace(/^rail/, "")}`;
+  const label = (comp && comp.label) || compId;
+  return term ? `${label} (terminal ${term})` : label;
+}
+
 function goWiring(exId) {
   const exercise = EXERCISES.find((e) => e.id === exId);
   crumb.textContent = exercise.title;
@@ -420,7 +444,8 @@ function goWiring(exId) {
     const bad = val.results.find((r) => !r.ok);
     if (!bad) { statusEl.textContent = "Ya tienes todos los nodos completos — presiona Verificar."; return; }
     addScore(-10);
-    statusEl.textContent = `Pista: conecta juntas estas terminales — ${bad.net.join(", ")}`;
+    const names = bad.net.map((id) => friendlyTerminal(id, exercise));
+    statusEl.textContent = `Pista: estas terminales deben quedar unidas (no hace falta que sea un cable directo entre todas, pueden pasar por otras ya conectadas): ${names.join("  •  ")}`;
     statusEl.className = "wiring-status status-warn";
   });
 

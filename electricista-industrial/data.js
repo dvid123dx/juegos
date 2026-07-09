@@ -32,6 +32,7 @@ function actStep(fn, msg, wait) {
 
 const dolControl = {
   id: "dol-control",
+  level: 1,
   group: "directo",
   kind: "control",
   title: "Arranque Directo (DOL) — Circuito de Control",
@@ -91,6 +92,7 @@ const dolControl = {
 
 const dolPower = {
   id: "dol-power",
+  level: 1,
   group: "directo",
   kind: "fuerza",
   title: "Arranque Directo (DOL) — Circuito de Fuerza",
@@ -132,6 +134,7 @@ const dolPower = {
 
 const revControl = {
   id: "rev-control",
+  level: 1,
   group: "reversa",
   kind: "control",
   title: "Arranque con Inversión de Giro — Circuito de Control",
@@ -194,6 +197,7 @@ const revControl = {
 
 const ydControl = {
   id: "yd-control",
+  level: 2,
   group: "estrella-delta",
   kind: "control",
   title: "Arranque Estrella-Triángulo — Circuito de Control",
@@ -262,6 +266,7 @@ const ydControl = {
 
 const ydPower = {
   id: "yd-power",
+  level: 2,
   group: "estrella-delta",
   kind: "fuerza",
   title: "Arranque Estrella-Triángulo — Circuito de Fuerza",
@@ -316,6 +321,7 @@ const ydPower = {
 
 const autoControl = {
   id: "auto-control",
+  level: 2,
   group: "autotransformador",
   kind: "control",
   title: "Arranque por Autotransformador — Circuito de Control",
@@ -384,6 +390,7 @@ const autoControl = {
 
 const autoPower = {
   id: "auto-power",
+  level: 2,
   group: "autotransformador",
   kind: "fuerza",
   title: "Arranque por Autotransformador — Circuito de Fuerza",
@@ -445,6 +452,7 @@ const autoPower = {
 
 const twoSpeedControl = {
   id: "2speed-control",
+  level: 2,
   group: "dos-velocidades",
   kind: "control",
   title: "Motor de Dos Velocidades (Dahlander) — Circuito de Control",
@@ -509,6 +517,7 @@ const twoSpeedControl = {
 
 const twoSpeedPower = {
   id: "2speed-power",
+  level: 2,
   group: "dos-velocidades",
   kind: "fuerza",
   title: "Motor de Dos Velocidades (Dahlander) — Circuito de Fuerza",
@@ -569,6 +578,7 @@ const twoSpeedPower = {
 
 const alarmControl = {
   id: "alarm-control",
+  level: 1,
   group: "alarma",
   kind: "control",
   title: "Alarma con Sensor de Límite — Circuito de Control",
@@ -628,6 +638,7 @@ const alarmControl = {
 
 const vfdControl = {
   id: "vfd-control",
+  level: 2,
   group: "variador",
   kind: "control",
   title: "Arranque con Variador de Frecuencia — Circuito de Control",
@@ -672,6 +683,7 @@ const vfdControl = {
 
 const vfdPower = {
   id: "vfd-power",
+  level: 2,
   group: "variador",
   kind: "fuerza",
   title: "Arranque con Variador de Frecuencia — Circuito de Fuerza",
@@ -711,6 +723,7 @@ const vfdPower = {
 
 const chopperControl = {
   id: "chopper-control",
+  level: 2,
   group: "chopper",
   kind: "control",
   title: "Motor DC con Chopper — Circuito de Control",
@@ -770,6 +783,7 @@ const chopperControl = {
 
 const chopperPower = {
   id: "chopper-power",
+  level: 2,
   group: "chopper",
   kind: "fuerza",
   title: "Motor DC con Chopper — Circuito de Fuerza",
@@ -804,6 +818,7 @@ const chopperPower = {
 
 const twoStationControl = {
   id: "twostation-control",
+  level: 2,
   group: "botoneras",
   kind: "control",
   title: "Control desde Dos Botoneras — Circuito de Control",
@@ -847,6 +862,7 @@ const twoStationControl = {
 
 const softStarterControl = {
   id: "softstarter-control",
+  level: 2,
   group: "arranque-suave",
   kind: "control",
   title: "Arrancador Suave — Circuito de Control",
@@ -919,6 +935,7 @@ const softStarterControl = {
 
 const softStarterPower = {
   id: "softstarter-power",
+  level: 2,
   group: "arranque-suave",
   kind: "fuerza",
   title: "Arrancador Suave — Circuito de Fuerza",
@@ -963,6 +980,7 @@ const softStarterPower = {
 
 const sequentialControl = {
   id: "sequential-control",
+  level: 3,
   group: "secuencial",
   kind: "control",
   title: "Arranque Secuencial de 2 Motores — Circuito de Control",
@@ -1026,11 +1044,260 @@ const sequentialControl = {
   ],
 };
 
+/* =========================================================
+   EJERCICIO 19 (AVANZADO): Estrella-Triángulo con Inversión de Giro — CONTROL
+   ========================================================= */
+
+const ydRevControl = {
+  id: "ydrev-control",
+  group: "avanzado",
+  kind: "control",
+  level: 3,
+  title: "Estrella-Triángulo con Inversión de Giro — Circuito de Control",
+  brief: "Combina dos técnicas: KF/KR seleccionan el sentido de giro (con enclavamiento cruzado, igual que un reversible), y juntos alimentan la misma etapa de arranque estrella-triángulo (KT, KY, KD). Debes parar (S0) antes de poder invertir el sentido. Nivel avanzado.",
+  vb: [960, 860],
+  source: ["railL"],
+  return: ["railN"],
+  components: [
+    railComp("railL", true, 760, "L", 500, 50),
+    railComp("railN", true, 760, "N", 500, 800),
+    C("F2", "F2 térmico", TPL.contact("NC", "95-96", "95", "96"), 300, 110),
+    C("S0", "S0 Paro", TPL.button("NC", "1-2", "1", "2"), 300, 180, { manual: true }),
+    C("S1", "S1 Adelante", TPL.button("NO", "3-4", "3", "4"), 180, 260, { manual: true }),
+    C("KFaux1", "KF (sello)", TPL.contact("NO", "13-14", "13", "14"), 320, 260, { derivedFrom: "KFcoil" }),
+    C("KRaux_i1", "KR (enclav.)", TPL.contact("NC", "21-22", "21", "22"), 440, 260, { derivedFrom: "KRcoil" }),
+    C("S2", "S2 Reversa", TPL.button("NO", "3-4", "3", "4"), 600, 260, { manual: true }),
+    C("KRaux1", "KR (sello)", TPL.contact("NO", "13-14", "13", "14"), 740, 260, { derivedFrom: "KRcoil" }),
+    C("KFaux_i1", "KF (enclav.)", TPL.contact("NC", "21-22", "21", "22"), 600, 180, { derivedFrom: "KFcoil" }),
+    C("KFcoil", "KF", TPL.coil("KF", "adelante"), 280, 360),
+    C("KRcoil", "KR", TPL.coil("KR", "reversa"), 680, 360),
+    C("KFauxRun", "KF", TPL.contact("NO", "23-24", "23", "24"), 280, 450, { derivedFrom: "KFcoil" }),
+    C("KRauxRun", "KR", TPL.contact("NO", "23-24", "23", "24"), 680, 450, { derivedFrom: "KRcoil" }),
+    C("KTcoil", "KT", TPL.coil("KT", "temporiz."), 480, 450),
+    C("KTnc", "KT (15-16)", TPL.contact("NC", "15-16", "15", "16"), 340, 540, { timedFrom: { coil: "KTcoil", delayMs: 3000 } }),
+    C("KTno", "KT (15-18)", TPL.contact("NO", "15-18", "15", "18"), 620, 540, { timedFrom: { coil: "KTcoil", delayMs: 3000 } }),
+    C("KDauxNC", "KD (enclav.)", TPL.contact("NC", "21-22", "21", "22"), 340, 630, { derivedFrom: "KDcoil" }),
+    C("KYauxNC", "KY (enclav.)", TPL.contact("NC", "21-22", "21", "22"), 620, 630, { derivedFrom: "KYcoil" }),
+    C("KYcoil", "KY", TPL.coil("KY", "estrella"), 340, 720),
+    C("KDcoil", "KD", TPL.coil("KD", "triángulo"), 620, 720),
+  ],
+  nets: [
+    ["railL", "F2.95", "KFauxRun.23", "KRauxRun.23"],
+    ["F2.96", "S0.1"],
+    ["S0.2", "S1.3", "KFaux1.13", "S2.3", "KRaux1.13"],
+    ["S1.4", "KFaux1.14", "KRaux_i1.21"],
+    ["KRaux_i1.22", "KFcoil.A1"],
+    ["S2.4", "KRaux1.14", "KFaux_i1.21"],
+    ["KFaux_i1.22", "KRcoil.A1"],
+    ["KFauxRun.24", "KRauxRun.24", "KTcoil.A1", "KTnc.15", "KTno.15"],
+    ["KTnc.16", "KDauxNC.21"],
+    ["KDauxNC.22", "KYcoil.A1"],
+    ["KTno.18", "KYauxNC.21"],
+    ["KYauxNC.22", "KDcoil.A1"],
+    ["railN", "KFcoil.A2", "KRcoil.A2", "KTcoil.A2", "KYcoil.A2", "KDcoil.A2"],
+  ],
+  simulation: [
+    logStep("Presionas S1 (adelante)..."),
+    actStep((d) => {
+      d.setClosed("S1", true);
+      d.setEnergized("KFcoil", true);
+      d.setClosed("KFaux1", true);
+      d.setClosed("KFaux_i1", false);
+      d.setClosed("KFauxRun", true);
+      d.setEnergized("KTcoil", true);
+    }, "KF se energiza (adelante) y bloquea a KR. Arranca también el temporizador KT.", 900),
+    actStep((d) => { d.setClosed("S1", false); }, "Sueltas S1 — KF se mantiene por su sello.", 700),
+    actStep((d) => {
+      d.setClosed("KTnc", true);
+      d.setEnergized("KYcoil", true);
+      d.setClosed("KDauxNC", false);
+    }, "KT 15-16 (NC, ya cerrado desde el arranque) energiza KY: motor en ESTRELLA, girando ADELANTE.", 900),
+    logStep("Transcurre el tiempo ajustado en KT (arranque en estrella)..."),
+    actStep((d) => {
+      d.setClosed("KTnc", false);
+      d.setEnergized("KYcoil", false);
+      d.setClosed("KDauxNC", true);
+    }, "KT vence: abre 15-16 y KY se desenergiza (enclavamiento libre).", 900),
+    actStep((d) => {
+      d.setClosed("KTno", true);
+      d.setEnergized("KDcoil", true);
+      d.setClosed("KYauxNC", false);
+    }, "KT cierra 15-18: KD se energiza — TRIÁNGULO (tensión plena), sigue girando ADELANTE.", 900),
+    logStep("Presionas S0 (paro) y luego S2 (reversa)..."),
+    actStep((d) => { d.setClosed("S0", false); }, "Se abre S0.", 500),
+    actStep((d) => {
+      d.setEnergized("KFcoil", false);
+      d.setClosed("KFaux1", false);
+      d.setClosed("KFaux_i1", true);
+      d.setClosed("KFauxRun", false);
+      d.setEnergized("KTcoil", false);
+      d.setClosed("KTno", false);
+      d.setEnergized("KDcoil", false);
+      d.setClosed("KYauxNC", true);
+    }, "Todo se desenergiza: KF, KT y KD se abren. Motor detenido.", 900),
+    actStep((d) => { d.setClosed("S0", true); d.setClosed("S2", true); }, "S0 regresa a reposo. Presionas S2 (reversa)...", 700),
+    actStep((d) => {
+      d.setEnergized("KRcoil", true);
+      d.setClosed("KRaux1", true);
+      d.setClosed("KRaux_i1", false);
+      d.setClosed("KRauxRun", true);
+      d.setEnergized("KTcoil", true);
+      d.setClosed("S2", false);
+    }, "KR se energiza (reversa) — KF queda bloqueado. El temporizador arranca de nuevo: estrella y luego triángulo, ahora en REVERSA.", 1000),
+  ],
+};
+
+/* =========================================================
+   EJERCICIO 20 (AVANZADO): Cinta Transportadora con Paro de
+   Emergencia y Fin de Carrera — CONTROL
+   ========================================================= */
+
+const conveyorControl = {
+  id: "conveyor-control",
+  group: "avanzado",
+  kind: "control",
+  level: 3,
+  title: "Cinta Transportadora con Paro de Emergencia — Circuito de Control",
+  brief: "Dos motores en secuencia (K2 solo arranca si K1 ya corre, igual que un arranque secuencial) más un interruptor de emergencia SETA (paro general, prioridad máxima) y un fin de carrera LS1 que detiene la banda 2 si la pieza llega al final del recorrido. Nivel avanzado.",
+  vb: [1080, 650],
+  source: ["railL"],
+  return: ["railN"],
+  components: [
+    railComp("railL", true, 900, "L", 550, 60),
+    railComp("railN", true, 900, "N", 550, 590),
+    C("SETA", "SETA Emergencia", TPL.button("NC", "1-2", "1", "2"), 200, 130, { manual: true }),
+    C("F2", "F2 térmico", TPL.contact("NC", "95-96", "95", "96"), 320, 130),
+    C("S0", "S0 Paro", TPL.button("NC", "3-4", "3", "4"), 320, 200, { manual: true }),
+    C("S1", "S1 Marcha Banda 1", TPL.button("NO", "5-6", "5", "6"), 180, 290, { manual: true }),
+    C("K1aux1seal", "K1 (sello)", TPL.contact("NO", "13-14", "13", "14"), 320, 290, { derivedFrom: "K1coil" }),
+    C("K1coil", "K1", TPL.coil("K1", "banda 1"), 240, 390),
+    C("K1auxRun", "K1 (permiso)", TPL.contact("NO", "23-24", "23", "24"), 480, 290, { derivedFrom: "K1coil" }),
+    C("S2", "S2 Marcha Banda 2", TPL.button("NO", "5-6", "5", "6"), 620, 290, { manual: true }),
+    C("LS1", "LS1 Fin de carrera", TPL.limitSwitch("NC", "1-2", "1", "2"), 800, 290, { manual: true }),
+    C("K2aux1seal", "K2 (sello)", TPL.contact("NO", "13-14", "13", "14"), 940, 290, { derivedFrom: "K2coil" }),
+    C("K2coil", "K2", TPL.coil("K2", "banda 2"), 820, 390),
+    C("K1aux2", "K1", TPL.contact("NO", "33-34", "33", "34"), 240, 480, { derivedFrom: "K1coil" }),
+    C("H1", "H1 banda 1", TPL.lamp("H1", "green"), 240, 560),
+    C("K2aux2", "K2", TPL.contact("NO", "23-24", "23", "24"), 820, 480, { derivedFrom: "K2coil" }),
+    C("H2", "H2 banda 2", TPL.lamp("H2", "red"), 820, 560),
+  ],
+  nets: [
+    ["railL", "SETA.1", "K1aux2.33", "K2aux2.23"],
+    ["SETA.2", "F2.95"],
+    ["F2.96", "S0.3"],
+    ["S0.4", "S1.5", "K1aux1seal.13", "K1auxRun.23"],
+    ["S1.6", "K1aux1seal.14", "K1coil.A1"],
+    ["K1auxRun.24", "S2.5", "LS1.1"],
+    ["LS1.2", "K2aux1seal.13"],
+    ["S2.6", "K2aux1seal.14", "K2coil.A1"],
+    ["K1aux2.34", "H1.X1"],
+    ["K2aux2.24", "H2.X1"],
+    ["railN", "K1coil.A2", "K2coil.A2", "H1.X2", "H2.X2"],
+  ],
+  simulation: [
+    logStep("Presionas S1 (marcha banda 1)..."),
+    actStep((d) => {
+      d.setClosed("S1", true);
+      d.setEnergized("K1coil", true);
+      d.setClosed("K1aux1seal", true);
+      d.setClosed("K1auxRun", true);
+      d.setClosed("K1aux2", true);
+      d.setEnergized("H1", true);
+    }, "K1 arranca la banda 1, habilita el permiso para la banda 2 y enciende H1.", 900),
+    actStep((d) => { d.setClosed("S1", false); }, "Sueltas S1. Banda 1 en marcha.", 700),
+    logStep("Presionas S2 (marcha banda 2)..."),
+    actStep((d) => {
+      d.setClosed("S2", true);
+      d.setEnergized("K2coil", true);
+      d.setClosed("K2aux1seal", true);
+      d.setClosed("K2aux2", true);
+      d.setEnergized("H2", true);
+    }, "K2 arranca — banda 2 en marcha porque LS1 está en reposo (cerrado) y la banda 1 ya corría.", 900),
+    actStep((d) => { d.setClosed("S2", false); }, "Sueltas S2. Ambas bandas en marcha.", 700),
+    logStep("La pieza llega al final del recorrido y acciona LS1..."),
+    actStep((d) => {
+      d.setClosed("LS1", false);
+      d.setEnergized("K2coil", false);
+      d.setClosed("K2aux1seal", false);
+      d.setClosed("K2aux2", false);
+      d.setEnergized("H2", false);
+    }, "LS1 abre: K2 pierde alimentación de inmediato. Banda 2 se detiene (aunque estuviera sellada).", 900),
+    actStep((d) => { d.setClosed("LS1", true); }, "La pieza libera el rodillo — LS1 regresa a reposo (cerrado).", 700),
+    logStep("Alguien presiona la SETA de emergencia..."),
+    actStep((d) => {
+      d.setClosed("SETA", false);
+      d.setEnergized("K1coil", false);
+      d.setClosed("K1aux1seal", false);
+      d.setClosed("K1auxRun", false);
+      d.setClosed("K1aux2", false);
+      d.setEnergized("H1", false);
+    }, "La SETA corta la alimentación de TODO el circuito de una vez, sin importar el estado de K1/K2 — máxima prioridad de seguridad.", 1000),
+    actStep((d) => { d.setClosed("SETA", true); }, "Se destraba la SETA girándola — el sistema queda listo para volver a arrancar.", 800),
+  ],
+};
+
+/* =========================================================
+   EJERCICIO 21: Cinta Transportadora — FUERZA
+   ========================================================= */
+
+const conveyorPower = {
+  id: "conveyor-power",
+  group: "avanzado",
+  kind: "fuerza",
+  level: 2,
+  title: "Cinta Transportadora — Circuito de Fuerza",
+  brief: "Dos motores independientes, cada uno con su propio contactor y relé térmico: K1/F2a alimentan el motor de la banda 1, K2/F2b alimentan el de la banda 2. La SETA de emergencia del control corta ambos si se presiona.",
+  vb: [640, 620],
+  components: [
+    railComp("railL1", true, 500, "L1", 340, 50),
+    railComp("railL2", true, 500, "L2", 340, 90),
+    railComp("railL3", true, 500, "L3", 340, 130),
+    C("K1a", "K1", TPL.pole("1-2", "1", "2"), 220, 220),
+    C("K1b", "K1", TPL.pole("3-4", "3", "4"), 300, 220),
+    C("K1c", "K1", TPL.pole("5-6", "5", "6"), 380, 220),
+    C("F2a1", "F2a", TPL.pole("1-2", "1", "2"), 220, 320),
+    C("F2a2", "F2a", TPL.pole("3-4", "3", "4"), 300, 320),
+    C("F2a3", "F2a", TPL.pole("5-6", "5", "6"), 380, 320),
+    C("M1", "Motor Banda 1", TPL.motor(true), 300, 430),
+    C("K2a", "K2", TPL.pole("1-2", "1", "2"), 480, 220),
+    C("K2b", "K2", TPL.pole("3-4", "3", "4"), 560, 220),
+    C("K2c", "K2", TPL.pole("5-6", "5", "6"), 620, 220),
+    C("F2b1", "F2b", TPL.pole("1-2", "1", "2"), 480, 320),
+    C("F2b2", "F2b", TPL.pole("3-4", "3", "4"), 560, 320),
+    C("F2b3", "F2b", TPL.pole("5-6", "5", "6"), 620, 320),
+    C("M2", "Motor Banda 2", TPL.motor(true), 560, 430),
+  ],
+  nets: [
+    ["railL1", "K1a.1", "K2a.1"],
+    ["railL2", "K1b.3", "K2b.3"],
+    ["railL3", "K1c.5", "K2c.5"],
+    ["K1a.2", "F2a1.1"],
+    ["K1b.4", "F2a2.3"],
+    ["K1c.6", "F2a3.5"],
+    ["F2a1.2", "M1.U1"],
+    ["F2a2.4", "M1.V1"],
+    ["F2a3.6", "M1.W1"],
+    ["K2a.2", "F2b1.1"],
+    ["K2b.4", "F2b2.3"],
+    ["K2c.6", "F2b3.5"],
+    ["F2b1.2", "M2.U1"],
+    ["F2b2.4", "M2.V1"],
+    ["F2b3.6", "M2.W1"],
+  ],
+  simulation: [
+    logStep("K1 cierra (ver control) — banda 1 arranca..."),
+    actStep((d) => { d.setClosed("K1a", true); d.setClosed("K1b", true); d.setClosed("K1c", true); d.setRunning("M1", true); }, "Motor de la banda 1 en marcha.", 900),
+    logStep("K2 cierra (ver control) — banda 2 arranca..."),
+    actStep((d) => { d.setClosed("K2a", true); d.setClosed("K2b", true); d.setClosed("K2c", true); d.setRunning("M2", true); }, "Motor de la banda 2 en marcha. Ambas bandas transportando.", 900),
+  ],
+};
+
 const EXERCISES = [
   dolControl, dolPower, revControl, ydControl, ydPower, autoControl, autoPower,
   twoSpeedControl, twoSpeedPower, alarmControl,
   vfdControl, vfdPower, chopperControl, chopperPower, twoStationControl,
   softStarterControl, softStarterPower, sequentialControl,
+  ydRevControl, conveyorControl, conveyorPower,
 ];
 
 /* =========================================================
@@ -1183,4 +1450,7 @@ const QUIZ = [
   { q: "¿Para qué sirve el contactor de bypass en un arrancador suave?", a: ["Para invertir el sentido de giro", "Para derivar la corriente por contactos mecánicos una vez terminada la rampa, evitando las pérdidas de conmutación de los tiristores", "Para proteger contra sobrecarga", "Para medir la velocidad del motor"], correct: 1 },
   { q: "En un arranque secuencial de dos motores, ¿qué garantiza que el Motor 2 no pueda arrancar antes que el Motor 1?", a: ["Un temporizador en la bobina de K2", "Un contacto auxiliar NA de K1 (permiso) en serie dentro del circuito de marcha de K2", "El relé térmico del Motor 2", "No hay forma de garantizarlo eléctricamente"], correct: 1 },
   { q: "En ese mismo arranque secuencial, ¿por qué el botón de paro (S0) es compartido entre ambos motores?", a: ["Para ahorrar cableado únicamente", "Para poder detener ambos motores de forma segura con una sola orden, sin importar cuál esté corriendo", "Porque los motores no pueden tener paros independientes", "Es un error de diseño común"], correct: 1 },
+  { q: "En un arranque estrella-triángulo reversible, ¿por qué hay que presionar el paro (S0) antes de poder invertir el sentido de giro?", a: ["No es necesario, se puede invertir en cualquier momento", "Porque KF y KR están enclavados entre sí — mientras uno esté energizado, el otro queda bloqueado por seguridad", "Porque el temporizador lo exige por norma", "Porque el motor se daña si no se detiene primero"], correct: 1 },
+  { q: "¿Qué diferencia hay entre un paro normal (S0) y un interruptor de emergencia tipo SETA?", a: ["Ninguna, cumplen la misma función", "La SETA suele ir primero en la línea, cortando TODO el circuito de control de una sola vez, con máxima prioridad; un paro normal puede ser parte de una secuencia", "La SETA es solo decorativa", "El paro normal tiene mayor prioridad que la SETA"], correct: 1 },
+  { q: "En una cinta transportadora, ¿qué pasa si un fin de carrera (límite) NC se abre mientras el motor está sellado (auto-mantenido)?", a: ["No pasa nada, el sello lo mantiene energizado", "El contactor pierde alimentación de inmediato — el sello no puede mantener energizada una bobina si se corta su propia línea de alimentación", "El motor invierte el sentido de giro", "El térmico se dispara"], correct: 1 },
 ];
