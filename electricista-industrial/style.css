@@ -368,6 +368,11 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .terminal-pending { stroke: var(--accent2); stroke-width: 3.4; }
 .terminal-ok { stroke: var(--ok); }
 .terminal-bad { stroke: var(--bad); }
+.terminal-flash { animation: terminalFlash 1s ease-out; }
+@keyframes terminalFlash {
+  0%, 35% { stroke: #ff4d4d; stroke-width: 8; filter: drop-shadow(0 0 7px #ff4d4d); }
+  100% { stroke: var(--bad); stroke-width: 3; filter: none; }
+}
 .term-label { fill: #6f83ab; font-size: 8.5px; font-family: monospace; pointer-events: none; }
 
 /* cables: tubo con sombra + nucleo + brillo + ferrulas en cada extremo, como un cable real.

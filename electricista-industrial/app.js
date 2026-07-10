@@ -441,16 +441,13 @@ function goWiring(exId) {
         ? `¡Circuito correcto! (${val.correctNets}/${val.totalNets} nodos) — ya puedes presionar los botones (arriba, en el plano, o en el panel 3D) para operar el circuito en tiempo real.`
         : `¡Circuito correcto! (${val.correctNets}/${val.totalNets} nodos)`;
       statusEl.className = "wiring-status status-ok";
-      btnSim.disabled = false;
       if (!solvedOnce) { addScore(100); solvedOnce = true; }
     } else if (val.shorts > 0) {
-      statusEl.textContent = `Hay ${val.shorts} corto(s) circuito(s) no deseado(s) entre nodos distintos. Revisa las terminales en rojo.`;
+      statusEl.textContent = `Hay ${val.shorts} corto(s) circuito(s) no deseado(s) entre nodos distintos. Las terminales en rojo parpadean — revísalas.`;
       statusEl.className = "wiring-status status-bad";
-      btnSim.disabled = true;
     } else {
-      statusEl.textContent = `Van ${val.correctNets}/${val.totalNets} nodos correctos. Sigue conectando (terminales en rojo aún no completan su nodo).`;
+      statusEl.textContent = `Van ${val.correctNets}/${val.totalNets} nodos correctos. Las terminales en rojo (parpadeando) aún no completan su nodo. Si te atoras, "Ver demostración guiada" te muestra el cableado correcto.`;
       statusEl.className = "wiring-status status-warn";
-      btnSim.disabled = true;
     }
   });
 
@@ -469,7 +466,6 @@ function goWiring(exId) {
     diagram.markValidation({ results: exercise.nets.map((n) => ({ net: n, ok: false })) });
     statusEl.textContent = "Cableado borrado.";
     statusEl.className = "wiring-status";
-    btnSim.disabled = true;
   });
 
   btnUndo.addEventListener("click", () => {
@@ -479,7 +475,6 @@ function goWiring(exId) {
     } else {
       statusEl.textContent = "No hay cables que deshacer.";
     }
-    btnSim.disabled = true;
   });
 
   btnSim.addEventListener("click", async () => {
@@ -547,12 +542,10 @@ function goWiringCombined(exId) {
     if (perfectC && perfectP) {
       statusEl.textContent = "¡Control y fuerza correctos! Ya puedes presionar los botones (arriba, en el plano, o en el panel 3D) para operar ambos circuitos en tiempo real.";
       statusEl.className = "wiring-status status-ok";
-      btnSim.disabled = false;
       if (!solvedOnce) { addScore(150); solvedOnce = true; }
     } else {
-      statusEl.textContent = "Verifica el circuito de control y el de fuerza por separado — ambos deben quedar correctos para poder simular.";
+      statusEl.textContent = "Verifica el circuito de control y el de fuerza por separado. Las terminales en rojo (parpadeando) marcan el problema. Si te atoras, \"Ver demostración guiada\" te muestra el resultado esperado sin necesidad de terminar el cableado.";
       statusEl.className = "wiring-status";
-      btnSim.disabled = true;
     }
   }
 

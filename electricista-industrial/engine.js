@@ -1295,11 +1295,21 @@ class Diagram {
   }
 
   markValidation(val) {
-    this.gTerm.querySelectorAll(".terminal").forEach((c) => c.classList.remove("terminal-ok", "terminal-bad"));
+    this.gTerm.querySelectorAll(".terminal").forEach((c) => c.classList.remove("terminal-ok", "terminal-bad", "terminal-flash"));
     for (const r of val.results) {
       for (const t of r.net) {
         const c = this.gTerm.querySelector(`[data-term="${CSS.escape(t)}"]`);
-        if (c) c.classList.add(r.ok ? "terminal-ok" : "terminal-bad");
+        if (!c) continue;
+        c.classList.add(r.ok ? "terminal-ok" : "terminal-bad");
+        if (!r.ok) {
+          // a plain colored ring is easy to miss among dozens of terminals —
+          // flash the wrong ones brightly for a second so the eye is drawn
+          // straight to the problem
+          c.getBoundingClientRect(); // force reflow so the animation restarts
+          c.classList.add("terminal-flash");
+          clearTimeout(c._flashTimer);
+          c._flashTimer = setTimeout(() => c.classList.remove("terminal-flash"), 1000);
+        }
       }
     }
   }
