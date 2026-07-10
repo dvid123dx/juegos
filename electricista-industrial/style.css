@@ -343,9 +343,17 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .vfd-side { fill: #141d33; opacity: 0.95; }
 .vfd-screen { fill: #06140f; stroke: #0d1526; stroke-width: 1; }
 .vfd-readout { fill: #43ff8f; font-size: 11px; font-family: monospace; font-weight: 700; text-anchor: middle; }
-.vfd-bar { fill: #43ff8f; opacity: 0.85; }
+.vfd-bar { fill: #43ff8f; opacity: 0.85; transform-box: fill-box; transform-origin: bottom; }
 .ss-ramp { stroke: #43ff8f; stroke-width: 2; fill: none; stroke-linecap: round; }
 .chopper-pwm { fill: #ffd54f; opacity: 0.9; }
+
+/* variador / chopper: animacion clara de "activo" cuando manda corriente al motor,
+   ya que la caja por si sola no tiene una parte movil visible como un motor */
+.component.running .vfd-body { filter: url(#fDrop) drop-shadow(0 0 9px #35e07a); }
+.component.running .vfd-bar { animation: vfdBar 0.55s ease-in-out infinite alternate; }
+@keyframes vfdBar { from { transform: scaleY(0.55); opacity: 0.55; } to { transform: scaleY(1.2); opacity: 1; } }
+.component.running .vfd-readout { animation: vfdReadoutPulse 1s ease-in-out infinite; }
+@keyframes vfdReadoutPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
 /* selector de dos posiciones enclavado */
 .sel-body { fill: url(#gBezel); stroke: #4a5266; stroke-width: 0.8; filter: url(#fDrop); }

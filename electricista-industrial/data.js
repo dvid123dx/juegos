@@ -1561,12 +1561,99 @@ const sensorActuatorCombined = {
   ],
 };
 
+/* =========================================================
+   EJERCICIO 25 (COMBINADO): Variador de Frecuencia — Control
+   y Fuerza, con el motor a la vista
+   ========================================================= */
+
+const vfdCombined = {
+  id: "vfd-combined",
+  group: "variador",
+  kind: "combinado",
+  combined: true,
+  level: 2,
+  title: "Arranque con Variador de Frecuencia — Control y Fuerza Combinados",
+  brief: "Cablea el selector SEL1 (marcha/paro) y SEL2 (adelante/reversa) en el control, y L1-L2-L3 → Q1 → variador → motor en la fuerza. Aquí ves el motor girar en el mismo lugar donde operas el variador — sin sello ni enclavamiento, porque el propio variador gestiona la transición.",
+  control: {
+    source: ["railL"],
+    return: ["railN"],
+    vb: [640, 520],
+    components: [
+      railComp("railL", true, 500, "L", 340, 50),
+      railComp("railN", true, 500, "N", 340, 460),
+      C("F2", "F2 térmico", TPL.contact("NC", "95-96", "95", "96"), 260, 110),
+      C("SEL1", "SEL1 Marcha/Paro", TPL.selector("0-1", "0", "1"), 220, 190, { toggle: true }),
+      C("SEL2", "SEL2 Adel./Rev.", TPL.selector("0-1", "0", "1"), 420, 190, { toggle: true }),
+      C("VFDRUNaux", "VFD", TPL.contact("NO", "13-14", "13", "14"), 105, 190),
+      C("VFDDIRaux", "VFD", TPL.contact("NO", "13-14", "13", "14"), 545, 190),
+      C("VFDRUNcoil", "VFD", TPL.coil("VFD", "marcha"), 220, 300),
+      C("VFDDIRcoil", "VFD", TPL.coil("VFD", "reversa"), 420, 300),
+      C("H1", "H1 marcha", TPL.lamp("H1", "green"), 105, 390),
+      C("H2", "H2 reversa", TPL.lamp("H2", "red"), 545, 390),
+    ],
+    nets: [
+      ["railL", "F2.95", "VFDRUNaux.13", "VFDDIRaux.13"],
+      ["F2.96", "SEL1.0", "SEL2.0"],
+      ["SEL1.1", "VFDRUNcoil.A1"],
+      ["SEL2.1", "VFDDIRcoil.A1"],
+      ["VFDRUNaux.14", "H1.X1"],
+      ["VFDDIRaux.14", "H2.X1"],
+      ["railN", "VFDRUNcoil.A2", "VFDDIRcoil.A2", "H1.X2", "H2.X2"],
+    ],
+  },
+  power: {
+    vb: [560, 560],
+    components: [
+      railComp("railL1", true, 420, "L1", 300, 50),
+      railComp("railL2", true, 420, "L2", 300, 90),
+      railComp("railL3", true, 420, "L3", 300, 130),
+      C("Q1a", "Q1", TPL.pole("1-2", "1", "2"), 220, 210),
+      C("Q1b", "Q1", TPL.pole("3-4", "3", "4"), 300, 210),
+      C("Q1c", "Q1", TPL.pole("5-6", "5", "6"), 380, 210),
+      C("VFD", "Variador", TPL.vfd(), 300, 340),
+      C("M", "Motor", TPL.motor(true), 300, 480),
+    ],
+    nets: [
+      ["railL1", "Q1a.1"],
+      ["railL2", "Q1b.3"],
+      ["railL3", "Q1c.5"],
+      ["Q1a.2", "VFD.L1"],
+      ["Q1b.4", "VFD.L2"],
+      ["Q1c.6", "VFD.L3"],
+      ["VFD.U", "M.U1"],
+      ["VFD.V", "M.V1"],
+      ["VFD.W", "M.W1"],
+    ],
+  },
+  simulation: [
+    cLogStep("Giras SEL1 a la posición 'Marcha'..."),
+    cActStep((dc, dp) => {
+      dc.setClosed("SEL1", true);
+      dc.setEnergized("VFDRUNcoil", true);
+      dc.setEnergized("H1", true);
+      dp.setClosed("Q1a", true);
+      dp.setClosed("Q1b", true);
+      dp.setClosed("Q1c", true);
+    }, "El variador recibe la orden de marcha (entrada digital activa) y queda alimentado por las 3 líneas.", 900),
+    cActStep((dc, dp) => {
+      dp.setRunning("VFD", true);
+      dp.setRunning("M", true);
+    }, "El variador rampa la velocidad de 0 a 60 Hz — mira el motor acelerar suavemente.", 1100),
+    cLogStep("Giras SEL2 a 'Reversa'..."),
+    cActStep((dc) => {
+      dc.setClosed("SEL2", true);
+      dc.setEnergized("VFDDIRcoil", true);
+      dc.setEnergized("H2", true);
+    }, "El variador invierte la secuencia internamente — sin contactores de por medio.", 900),
+  ],
+};
+
 const EXERCISES = [
   dolControl, dolPower, revControl, ydControl, ydPower, autoControl, autoPower,
   twoSpeedControl, twoSpeedPower, alarmControl,
   vfdControl, vfdPower, chopperControl, chopperPower, twoStationControl,
   softStarterControl, softStarterPower, sequentialControl,
-  ydRevControl, conveyorControl, conveyorPower,
+  ydRevControl, conveyorControl, conveyorPower, vfdCombined,
   singlePhaseMotorCombined, twoPhaseHeaterCombined, sensorActuatorCombined,
 ];
 

@@ -442,7 +442,10 @@ TPL.vfd = () => ({
     g.appendChild(svgEl("rect", { x: -30, y: -26, width: 60, height: 22, rx: 2, class: "vfd-screen" }));
     g.appendChild(text(0, -14, "60.0 Hz", "vfd-readout"));
     for (let i = 0; i < 5; i++) {
-      g.appendChild(svgEl("rect", { x: -26 + i * 12, y: 6, width: 8, height: 6 + i * 3, class: "vfd-bar" }));
+      g.appendChild(svgEl("rect", {
+        x: -26 + i * 12, y: 6, width: 8, height: 6 + i * 3, class: "vfd-bar",
+        style: `animation-delay:${i * 0.09}s`,
+      }));
     }
     g.appendChild(text(0, 34, "VARIADOR", "nameplate-sub"));
     for (const dx of [-24, 0, 24]) { screwAt(g, dx, -46, 5.5); screwAt(g, dx, 46, 5.5); }
