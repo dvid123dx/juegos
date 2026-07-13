@@ -81,7 +81,33 @@ function useTemplate(id) {
 
 document.getElementById("btn-home").addEventListener("click", () => goMenu());
 
+// historial de navegacion: cada pantalla se registra a si misma al entrar,
+// asi "Atras" siempre regresa un paso real (no solo al menu principal)
+let NAV_STACK = [];
+
+function recordNav(replay) {
+  NAV_STACK.push(replay);
+  if (NAV_STACK.length > 100) NAV_STACK.shift();
+  updateBackButton();
+}
+
+function goBack() {
+  if (NAV_STACK.length < 2) return;
+  NAV_STACK.pop();
+  const prev = NAV_STACK.pop();
+  if (prev) prev();
+  updateBackButton();
+}
+
+function updateBackButton() {
+  const btn = document.getElementById("btn-back");
+  if (btn) btn.disabled = NAV_STACK.length < 2;
+}
+
+document.getElementById("btn-back").addEventListener("click", () => goBack());
+
 function goMenu() {
+  recordNav(() => goMenu());
   crumb.textContent = "Electricista Industrial";
   useTemplate("tpl-menu");
   app.querySelectorAll(".menu-card").forEach((btn) => {
@@ -183,6 +209,7 @@ function backFaceHTML(comp) {
 let explorerRotX = -18, explorerRotY = -28;
 
 function goExplorer() {
+  recordNav(() => goExplorer());
   crumb.textContent = "Explorador de Componentes";
   useTemplate("tpl-explorer");
   const list = document.getElementById("explorer-list");
@@ -255,6 +282,7 @@ function goExplorer() {
 /* ---------------- Retos de cableado ---------------- */
 
 function goChallenges() {
+  recordNav(() => goChallenges());
   crumb.textContent = "Retos de Cableado";
   useTemplate("tpl-challenges");
   const container = document.getElementById("challenge-groups");
@@ -292,6 +320,7 @@ function goChallenges() {
 /* ---------------- Modo Diagnostico ---------------- */
 
 function goDiagnostico() {
+  recordNav(() => goDiagnostico());
   crumb.textContent = "Modo Diagnóstico";
   useTemplate("tpl-diagnostics");
   const row = document.getElementById("diagnostics-list");
@@ -310,6 +339,7 @@ function goDiagnostico() {
 /* ---------------- Manual de Referencia ---------------- */
 
 function goReferencia() {
+  recordNav(() => goReferencia());
   crumb.textContent = "Manual de Referencia";
   useTemplate("tpl-referencia");
 }
@@ -456,6 +486,7 @@ function friendlyTerminal(id, exercise) {
 // canvas starts pre-wired (correctly, except for one deliberate fault)
 // instead of blank, and the brief is replaced with the reported symptom.
 function goWiring(exId, diag) {
+  recordNav(() => goWiring(exId, diag));
   const exercise = diag ? diag.exercise : EXERCISES.find((e) => e.id === exId);
   crumb.textContent = diag ? "Diagnóstico: " + diag.title : exercise.title;
   useTemplate("tpl-wiring");
@@ -574,6 +605,7 @@ function goWiring(exId, diag) {
 // simulation — so the same references (K1, F2...) are visibly the same
 // physical devices in both drawings.
 function goWiringCombined(exId) {
+  recordNav(() => goWiringCombined(exId));
   const exercise = EXERCISES.find((e) => e.id === exId);
   crumb.textContent = exercise.title;
   useTemplate("tpl-wiring-combined");
@@ -701,6 +733,7 @@ function goWiringCombined(exId) {
 /* ---------------- Planos de referencia ---------------- */
 
 function goPlanos() {
+  recordNav(() => goPlanos());
   crumb.textContent = "Planos de Referencia";
   useTemplate("tpl-planos");
   const list = document.getElementById("planos-list");
@@ -746,6 +779,7 @@ function goPlanos() {
 /* ---------------- Quiz ---------------- */
 
 function goQuiz() {
+  recordNav(() => goQuiz());
   crumb.textContent = "Quiz Teórico";
   useTemplate("tpl-quiz");
   const body = document.getElementById("quiz-body");
@@ -840,6 +874,7 @@ const FREE_PALETTE = [
 ];
 
 function goFree() {
+  recordNav(() => goFree());
   crumb.textContent = "Modo Libre";
   useTemplate("tpl-free");
   const svg = document.getElementById("free-svg");

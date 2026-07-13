@@ -863,9 +863,18 @@ class Diagram {
     this.gWires = svgEl("g", { class: "layer-wires" });
     this.gComp = svgEl("g", { class: "layer-components" });
     this.gTerm = svgEl("g", { class: "layer-terminals" });
+    this.gPreview = svgEl("g", { class: "layer-preview" });
     this.svg.appendChild(this.gWires);
     this.svg.appendChild(this.gComp);
     this.svg.appendChild(this.gTerm);
+    this.svg.appendChild(this.gPreview);
+
+    // cableado inteligente: mientras hay un cable "pendiente" (un terminal ya
+    // elegido, esperando el segundo clic), se dibuja una linea guia que sigue
+    // al mouse y resalta los terminales compatibles del mismo componente para
+    // que sea obvio a donde puede llegar el cable antes de soltar el clic
+    this.svg.addEventListener("mousemove", (e) => this._onCanvasMouseMove(e));
+    bg.addEventListener("click", () => { if (this.pending) this._cancelPending(); });
 
     this.compGroups = new Map();
     this.compLabelEls = new Map();
@@ -1258,23 +1267,65 @@ class Diagram {
     if (!this.pending) {
       this.pending = id;
       this._highlight(id, true);
+      this._highlightCompatible(id, true);
       return;
     }
     if (this.pending === id) {
-      this._highlight(id, false);
-      this.pending = null;
+      this._cancelPending();
       return;
     }
     const before = this.wires.length;
+    this._highlightCompatible(this.pending, false);
     this._addWire(this.pending, id);
     if (window.SFX) { if (this.wires.length > before) SFX.connect(); else SFX.disconnect(); }
     this._highlight(this.pending, false);
     this.pending = null;
+    this._clearPreview();
+  }
+
+  // clic en el lienzo vacio, o en el mismo terminal ya elegido: cancela el
+  // cable a medias en vez de dejarlo "atorado" esperando un segundo clic
+  _cancelPending() {
+    if (!this.pending) return;
+    this._highlight(this.pending, false);
+    this._highlightCompatible(this.pending, false);
+    this.pending = null;
+    this._clearPreview();
   }
 
   _highlight(id, on) {
     const c = this.gTerm.querySelector(`[data-term="${CSS.escape(id)}"]`);
     if (c) c.classList.toggle("terminal-pending", on);
+  }
+
+  // mientras un terminal esta pendiente, resalta los demas terminales del
+  // MISMO componente (donde casi nunca tiene sentido cablear, ya que ya estan
+  // unidos internamente) para que sea obvio cuales SI son un destino util
+  _highlightCompatible(pendingId, on) {
+    const dot = pendingId.lastIndexOf(".");
+    const compId = dot === -1 ? pendingId : pendingId.slice(0, dot);
+    for (const [id] of this.termPos) {
+      if (id === pendingId) continue;
+      const idDot = id.lastIndexOf(".");
+      const otherComp = idDot === -1 ? id : id.slice(0, idDot);
+      if (otherComp !== compId) continue;
+      const c = this.gTerm.querySelector(`[data-term="${CSS.escape(id)}"]`);
+      if (c) c.classList.toggle("terminal-sibling", on);
+    }
+  }
+
+  _onCanvasMouseMove(e) {
+    if (!this.pending) return;
+    const from = this.termPos.get(this.pending);
+    if (!from) return;
+    const pt = this.toSvgPoint(e.clientX, e.clientY);
+    this._clearPreview();
+    const d = `M${from.x},${from.y} L${pt.x},${pt.y}`;
+    this.gPreview.appendChild(svgEl("path", { d, class: "cable-preview", fill: "none" }));
+  }
+
+  _clearPreview() {
+    this.gPreview.innerHTML = "";
   }
 
   _addWire(a, b) {

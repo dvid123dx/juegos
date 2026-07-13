@@ -30,6 +30,8 @@ html, body { height: 100%; background: var(--bg); color: var(--ink); overflow-x:
 }
 .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
 .icon-btn.muted { opacity: 0.5; }
+.icon-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.icon-btn:disabled:hover { border-color: var(--line); color: var(--ink); }
 #crumb { font-weight: 600; letter-spacing: 0.5px; color: var(--ink-dim); }
 #topbar-right { display: flex; align-items: center; gap: 10px; }
 #score-badge {
@@ -381,9 +383,15 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .sel-hit { fill: transparent; stroke: none; pointer-events: all; }
 
 /* terminales interactivos: anillo de estado sobre el tornillo real */
-.terminal { fill: transparent; stroke: transparent; stroke-width: 3; cursor: pointer; transition: stroke 0.15s; }
-.terminal:hover { stroke: var(--accent); }
-.terminal-pending { stroke: var(--accent2); stroke-width: 3.4; }
+.terminal { fill: transparent; stroke: transparent; stroke-width: 3; cursor: pointer; transition: stroke 0.15s, stroke-width 0.15s; }
+.terminal:hover { stroke: var(--accent); stroke-width: 5; filter: drop-shadow(0 0 5px var(--accent)); }
+.terminal-pending { stroke: var(--accent2); stroke-width: 3.4; animation: pendingPulse 0.9s ease-in-out infinite; }
+.terminal-sibling { stroke: rgba(255,255,255,0.3); stroke-width: 3; }
+@keyframes pendingPulse {
+  0%, 100% { filter: drop-shadow(0 0 3px var(--accent2)); }
+  50% { filter: drop-shadow(0 0 9px var(--accent2)); }
+}
+.cable-preview { stroke: var(--accent2); stroke-width: 3; stroke-dasharray: 7 6; opacity: 0.8; pointer-events: none; animation: flow 0.4s linear infinite; }
 .terminal-ok { stroke: var(--ok); }
 .terminal-bad { stroke: var(--bad); }
 .terminal-flash { animation: terminalFlash 1s ease-out; }
