@@ -59,6 +59,7 @@ const GROUP_LABELS = {
   hvac: "HVAC y Ventilación",
   respaldo: "Energía de Respaldo (ATS)",
   calefaccion: "Calefacción y Protección de Motores",
+  izaje: "Grúas y Polipastos (Izaje)",
 };
 
 const LEVEL_LABELS = {

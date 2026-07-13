@@ -2792,6 +2792,88 @@ const antiCondensationHeaterControl = {
   ],
 };
 
+/* =========================================================
+   EJERCICIO: Polipasto con Límites de Altura — CONTROL
+   ========================================================= */
+
+const hoistLimitControl = {
+  id: "hoist-limit-control",
+  level: 3,
+  group: "izaje",
+  kind: "control",
+  title: "Polipasto con Límites de Altura — Circuito de Control",
+  brief: "Cablea un control de subir/bajar (KU/KD) con enclavamiento mutuo, igual que un arrancador reversible, pero agrega LSU y LSD: los límites de carrera superior e inferior que detienen el motor automáticamente al llegar al tope, sin depender de que alguien suelte el botón a tiempo.",
+  vb: [780, 620],
+  source: ["railL"],
+  return: ["railN"],
+  components: [
+    railComp("railL", true, 640, "L", 390, 60),
+    railComp("railN", true, 640, "N", 390, 560),
+    C("F2", "F2 térmico", TPL.contact("NC", "95-96", "95", "96"), 220, 130),
+    C("KUaux2", "KU", TPL.contact("NO", "23-24", "23", "24"), 560, 130, { derivedFrom: "KUcoil" }),
+    C("KDaux2", "KD", TPL.contact("NO", "23-24", "23", "24"), 680, 130, { derivedFrom: "KDcoil" }),
+    C("H1", "H1 subiendo", TPL.lamp("H1", "green"), 560, 210),
+    C("H2", "H2 bajando", TPL.lamp("H2", "red"), 680, 210),
+    C("S0", "S0 Paro", TPL.button("NC", "1-2", "1", "2"), 220, 210, { manual: true }),
+    C("S1", "S1 Subir", TPL.button("NO", "3-4", "3", "4"), 140, 300, { manual: true }),
+    C("KUaux1", "KU (sello)", TPL.contact("NO", "13-14", "13", "14"), 280, 300, { derivedFrom: "KUcoil" }),
+    C("LSU", "LSU límite arriba", TPL.limitSwitch("NC", "1-2", "1", "2"), 140, 380, { manual: true }),
+    C("KDaux_i", "KD (interlock)", TPL.contact("NC", "21-22", "21", "22"), 280, 380, { derivedFrom: "KDcoil" }),
+    C("KUcoil", "KU", TPL.coil("KU", "subir"), 140, 470),
+    C("S2", "S2 Bajar", TPL.button("NO", "3-4", "3", "4"), 460, 300, { manual: true }),
+    C("KDaux1", "KD (sello)", TPL.contact("NO", "13-14", "13", "14"), 600, 300, { derivedFrom: "KDcoil" }),
+    C("LSD", "LSD límite abajo", TPL.limitSwitch("NC", "1-2", "1", "2"), 460, 380, { manual: true }),
+    C("KUaux_i", "KU (interlock)", TPL.contact("NC", "21-22", "21", "22"), 600, 380, { derivedFrom: "KUcoil" }),
+    C("KDcoil", "KD", TPL.coil("KD", "bajar"), 460, 470),
+  ],
+  nets: [
+    ["railL", "F2.95", "KUaux2.23", "KDaux2.23"],
+    ["F2.96", "S0.1"],
+    ["S0.2", "S1.3", "KUaux1.13", "S2.3", "KDaux1.13"],
+    ["S1.4", "KUaux1.14", "LSU.1"],
+    ["LSU.2", "KDaux_i.21"],
+    ["KDaux_i.22", "KUcoil.A1"],
+    ["S2.4", "KDaux1.14", "LSD.1"],
+    ["LSD.2", "KUaux_i.21"],
+    ["KUaux_i.22", "KDcoil.A1"],
+    ["KUaux2.24", "H1.X1"],
+    ["KDaux2.24", "H2.X1"],
+    ["railN", "KUcoil.A2", "KDcoil.A2", "H1.X2", "H2.X2"],
+  ],
+  simulation: [
+    logStep("El polipasto está detenido a media altura: LSU y LSD están cerrados (nadie llegó al tope)."),
+    logStep("Presionas S1 (subir)..."),
+    actStep((d) => { d.setClosed("S1", true); }, null, 500),
+    actStep((d) => {
+      d.setEnergized("KUcoil", true);
+      d.setClosed("KUaux1", true);
+      d.setClosed("KUaux2", true);
+      d.setClosed("KUaux_i", false);
+      d.setEnergized("H1", true);
+    }, "KU se energiza: el motor sube el gancho. KUaux_i se abre, bloqueando cualquier intento de bajar al mismo tiempo.", 1000),
+    actStep((d) => { d.setClosed("S1", false); }, "Sueltas S1 — KU se mantiene sellado.", 700),
+    logStep("El gancho llega al límite superior y acciona LSU..."),
+    actStep((d) => {
+      d.setClosed("LSU", false);
+      d.setEnergized("KUcoil", false);
+      d.setClosed("KUaux1", false);
+      d.setClosed("KUaux2", false);
+      d.setClosed("KUaux_i", true);
+      d.setEnergized("H1", false);
+    }, "LSU abre: KU se desenergiza solo, deteniendo el ascenso justo en el tope sin forzar el mecanismo.", 1100),
+    actStep((d) => { d.setClosed("LSU", true); }, "El gancho baja un poco y LSU regresa a cerrado, listo para operar de nuevo.", 700),
+    logStep("Ahora presionas S2 (bajar)..."),
+    actStep((d) => { d.setClosed("S2", true); }, null, 500),
+    actStep((d) => {
+      d.setEnergized("KDcoil", true);
+      d.setClosed("KDaux1", true);
+      d.setClosed("KDaux2", true);
+      d.setEnergized("H2", true);
+    }, "KD se energiza: el motor baja el gancho.", 900),
+    actStep((d) => { d.setClosed("S2", false); }, "Sueltas S2 — KD se mantiene sellado.", 700),
+  ],
+};
+
 const EXERCISES = [
   dolControl, dolPower, revControl, ydControl, ydPower, autoControl, autoPower,
   twoSpeedControl, twoSpeedPower, alarmControl,
@@ -2803,7 +2885,7 @@ const EXERCISES = [
   dualFloatPumpCombined, capacitorBankCombined, trafficLightSequencer,
   slidingDoorCombined, estopMcrControl, compressorControl, photoSorterControl,
   hvacFanControl, sumpPumpControl, airlockInterlockControl, atsControl,
-  pullCordChainControl, antiCondensationHeaterControl,
+  pullCordChainControl, antiCondensationHeaterControl, hoistLimitControl,
 ];
 
 /* =========================================================
@@ -3220,4 +3302,10 @@ const QUIZ = [
   { q: "En un diagrama de control tipo escalera (ladder), ¿qué representan las dos líneas verticales de los extremos?", a: ["Los rieles de alimentación (L y N, o L1 y L2) del circuito de control", "Siempre representan las tres fases de un motor trifásico", "Un símbolo exclusivo para relés de tiempo", "Una convención sin ningún significado eléctrico real"], correct: 0 },
   { q: "¿Por qué es útil dibujar el circuito de control y el de fuerza por separado, aunque pertenezcan al mismo arrancador?", a: ["Se entiende la lógica de mando sin la complejidad de la potencia", "Es un requisito exclusivamente estético sin beneficio práctico", "Porque ambos circuitos jamás comparten ningún mismo dispositivo", "Porque el circuito de fuerza nunca necesita protección térmica"], correct: 0 },
   { q: "¿Qué significa que dos contactos en un diagrama compartan la misma referencia (por ejemplo, dos símbolos 'K1')?", a: ["Pertenecen físicamente al mismo dispositivo y se accionan juntos por la misma bobina", "Son dos dispositivos completamente independientes que coinciden por casualidad", "Uno de los dos símbolos necesariamente está mal dibujado", "Solo ocurre en diagramas de circuitos de corriente directa"], correct: 0 },
+
+  // ---- Control de polipastos y gruas (izaje) ----
+  { q: "En un control de polipasto con subir/bajar (KU/KD), ¿para qué sirven los límites de carrera LSU y LSD?", a: ["Detienen el motor automáticamente al llegar al tope, sin depender del operador", "Sustituyen por completo al enclavamiento eléctrico entre KU y KD", "Miden la carga que lleva colgada el gancho del polipasto", "Invierten el sentido de giro del motor cada vez que se activan"], correct: 0 },
+  { q: "¿Por qué KU y KD, en un control de polipasto, deben tener el mismo enclavamiento mutuo que un arrancador reversible?", a: ["Cerrar ambos a la vez provocaría un cortocircuito entre fases", "Porque así lo exige únicamente el color de los botones de mando", "Porque de lo contrario el polipasto giraría más lento de lo normal", "No existe ninguna razón real para enclavarlos entre sí"], correct: 0 },
+  { q: "Si LSU (límite superior) se abre mientras KU está energizado, ¿qué debe pasar?", a: ["KU se desenergiza de inmediato, deteniendo el ascenso", "KD se energiza automáticamente para bajar el gancho", "No pasa nada hasta que se presione el botón de paro", "El motor invierte su sentido de giro sin detenerse"], correct: 0 },
+  { q: "Tras detenerse por el límite superior LSU, ¿qué se necesita para volver a subir el polipasto?", a: ["Que el gancho baje un poco para que LSU regrese a reposo", "Nada, KU se reenergiza solo pasado un tiempo", "Cambiar manualmente la polaridad de la bobina KU", "Reemplazar físicamente el limit switch LSU"], correct: 0 },
 ];
