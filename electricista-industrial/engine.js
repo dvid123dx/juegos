@@ -1080,6 +1080,7 @@ class Diagram {
     g.classList.toggle("closed", wantClosed);
     g.classList.toggle("pressed", pressed);
     this._flash(g);
+    if (pressed && window.SFX) SFX.click();
     this.solve();
   }
 
@@ -1090,6 +1091,7 @@ class Diagram {
     if (!g) return;
     g.classList.toggle("closed");
     this._flash(g);
+    if (window.SFX) SFX.toggleSwitch();
     // some switches are modeled as two linked contacts that always sit in
     // opposite positions (a 3-way/staircase switch's single lever, split
     // into two 2-terminal contacts since a gate only has one in/out pair)
@@ -1203,6 +1205,10 @@ class Diagram {
       if (!grp) continue;
       const now = { energized: grp.classList.contains("energized"), closed: grp.classList.contains("closed") };
       if (now.energized !== prev.energized || now.closed !== prev.closed) this._flash(grp);
+      if (window.SFX && now.energized !== prev.energized) {
+        const comp = this.exercise.components.find((c) => c.id === id);
+        if (comp && comp.tpl.isCoil) { if (now.energized) SFX.relayOn(); else SFX.relayOff(); }
+      }
     }
   }
 
@@ -1259,7 +1265,9 @@ class Diagram {
       this.pending = null;
       return;
     }
+    const before = this.wires.length;
     this._addWire(this.pending, id);
+    if (window.SFX) { if (this.wires.length > before) SFX.connect(); else SFX.disconnect(); }
     this._highlight(this.pending, false);
     this.pending = null;
   }

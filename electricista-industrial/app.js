@@ -8,10 +8,32 @@ const app = document.getElementById("app");
 const crumb = document.getElementById("crumb");
 const scoreBadge = document.getElementById("score-badge");
 
-let SCORE = 0;
+// progreso persistente: puntaje, retos resueltos y diagnosticos resueltos,
+// guardados en localStorage para que sobrevivan a un cierre del navegador
+const Progress = (() => {
+  let data = { solved: [], diagsSolved: [], score: 0 };
+  try {
+    const raw = localStorage.getItem("ei-progress");
+    if (raw) data = Object.assign(data, JSON.parse(raw));
+  } catch (e) { /* almacenamiento corrupto: seguimos con los valores por defecto */ }
+  function save() { localStorage.setItem("ei-progress", JSON.stringify(data)); }
+  return {
+    isSolved(id) { return data.solved.includes(id); },
+    markSolved(id) { if (!data.solved.includes(id)) { data.solved.push(id); save(); } },
+    isDiagSolved(id) { return data.diagsSolved.includes(id); },
+    markDiagSolved(id) { if (!data.diagsSolved.includes(id)) { data.diagsSolved.push(id); save(); } },
+    solvedCount() { return data.solved.length; },
+    getScore() { return data.score; },
+    setScore(v) { data.score = v; save(); },
+  };
+})();
+
+let SCORE = Progress.getScore();
+scoreBadge.textContent = "Puntos: " + SCORE;
 function addScore(v) {
   SCORE = Math.max(0, SCORE + v);
   scoreBadge.textContent = "Puntos: " + SCORE;
+  Progress.setScore(SCORE);
 }
 
 const GROUP_LABELS = {
@@ -232,6 +254,8 @@ function goChallenges() {
   crumb.textContent = "Retos de Cableado";
   useTemplate("tpl-challenges");
   const container = document.getElementById("challenge-groups");
+  const progressEl = document.getElementById("challenges-progress");
+  if (progressEl) progressEl.textContent = `${Progress.solvedCount()}/${EXERCISES.length} retos resueltos`;
   const byLevel = { 1: [], 2: [], 3: [] };
   for (const ex of EXERCISES) {
     const lvl = ex.level || 1;
@@ -247,9 +271,10 @@ function goChallenges() {
     row.className = "challenge-row";
     for (const ex of list) {
       const card = document.createElement("button");
-      card.className = "challenge-card";
+      card.className = "challenge-card" + (Progress.isSolved(ex.id) ? " challenge-solved" : "");
       const kindLabel = ex.combined ? "Control + Fuerza" : (ex.kind === "control" ? "Control" : ex.kind === "fuerza" ? "Fuerza" : "Circuito");
-      card.innerHTML = `<span class="challenge-kind">${kindLabel}</span>
+      card.innerHTML = `${Progress.isSolved(ex.id) ? '<span class="challenge-check">✓</span>' : ""}
+        <span class="challenge-kind">${kindLabel}</span>
         <span class="challenge-topic">${GROUP_LABELS[ex.group] || ex.group}</span>
         <span class="challenge-name">${ex.title}</span>`;
       card.addEventListener("click", () => (ex.combined ? goWiringCombined(ex.id) : goWiring(ex.id)));
@@ -268,8 +293,9 @@ function goDiagnostico() {
   const row = document.getElementById("diagnostics-list");
   for (const diag of DIAGNOSTICS) {
     const card = document.createElement("button");
-    card.className = "challenge-card";
-    card.innerHTML = `<span class="challenge-kind" style="background:rgba(255,107,107,0.15);color:#ff6b6b;">Falla reportada</span>
+    card.className = "challenge-card" + (Progress.isDiagSolved(diag.id) ? " challenge-solved" : "");
+    card.innerHTML = `${Progress.isDiagSolved(diag.id) ? '<span class="challenge-check">✓</span>' : ""}
+      <span class="challenge-kind" style="background:rgba(255,107,107,0.15);color:#ff6b6b;">Falla reportada</span>
       <span class="challenge-topic">${diag.exercise.title}</span>
       <span class="challenge-name">${diag.title}</span>`;
     card.addEventListener("click", () => goWiring(diag.exercise.id, diag));
@@ -484,11 +510,18 @@ function goWiring(exId, diag) {
         ? `¡Circuito correcto! (${val.correctNets}/${val.totalNets} nodos) — ya puedes presionar los botones (arriba, en el plano, o en el panel 3D) para operar el circuito en tiempo real.`
         : `¡Circuito correcto! (${val.correctNets}/${val.totalNets} nodos)`;
       statusEl.className = "wiring-status status-ok";
-      if (!solvedOnce) { addScore(100); solvedOnce = true; }
+      if (window.SFX) SFX.success();
+      if (!solvedOnce) {
+        addScore(100);
+        solvedOnce = true;
+        if (diag) Progress.markDiagSolved(diag.id); else Progress.markSolved(exercise.id);
+      }
     } else if (val.shorts > 0) {
       statusEl.textContent = `Hay ${val.shorts} corto(s) circuito(s) no deseado(s) entre nodos distintos. Las terminales en rojo parpadean — revísalas.`;
       statusEl.className = "wiring-status status-bad";
+      if (window.SFX) SFX.spark();
     } else {
+      if (window.SFX) SFX.error();
       statusEl.textContent = `Van ${val.correctNets}/${val.totalNets} nodos correctos. Las terminales en rojo (parpadeando) aún no completan su nodo. Si te atoras, "Ver demostración guiada" te muestra el cableado correcto.`;
       statusEl.className = "wiring-status status-warn";
     }
@@ -585,7 +618,7 @@ function goWiringCombined(exId) {
     if (perfectC && perfectP) {
       statusEl.textContent = "¡Control y fuerza correctos! Ya puedes presionar los botones (arriba, en el plano, o en el panel 3D) para operar ambos circuitos en tiempo real.";
       statusEl.className = "wiring-status status-ok";
-      if (!solvedOnce) { addScore(150); solvedOnce = true; }
+      if (!solvedOnce) { addScore(150); solvedOnce = true; Progress.markSolved(exercise.id); }
     } else {
       statusEl.textContent = "Verifica el circuito de control y el de fuerza por separado. Las terminales en rojo (parpadeando) marcan el problema. Si te atoras, \"Ver demostración guiada\" te muestra el resultado esperado sin necesidad de terminar el cableado.";
       statusEl.className = "wiring-status";
@@ -599,14 +632,17 @@ function goWiringCombined(exId) {
       if (val.perfect) {
         statusPane.textContent = `¡Correcto! (${val.correctNets}/${val.totalNets} nodos)`;
         statusPane.className = "pane-status status-ok";
+        if (window.SFX) SFX.success();
         setPerfect(true);
       } else if (val.shorts > 0) {
         statusPane.textContent = `${val.shorts} corto(s) circuito(s) no deseado(s). Revisa las terminales en rojo.`;
         statusPane.className = "pane-status status-bad";
+        if (window.SFX) SFX.spark();
         setPerfect(false);
       } else {
         statusPane.textContent = `Van ${val.correctNets}/${val.totalNets} nodos correctos.`;
         statusPane.className = "pane-status status-warn";
+        if (window.SFX) SFX.error();
         setPerfect(false);
       }
       updateOverall();
@@ -754,7 +790,7 @@ function goQuiz() {
           el.classList.add(oi === correctIdx ? "opt-correct" : (oi === i ? "opt-wrong" : "opt-disabled"));
           el.disabled = true;
         });
-        if (isCorrect) { correct++; addScore(20); } else { addScore(-5); }
+        if (isCorrect) { correct++; addScore(20); if (window.SFX) SFX.success(); } else { addScore(-5); if (window.SFX) SFX.error(); }
         setTimeout(() => { idx++; renderQ(); }, 1100);
       });
       opts.appendChild(b);
