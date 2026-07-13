@@ -500,6 +500,7 @@ function goWiring(exId, diag) {
   const btnClear = document.getElementById("btn-clear");
   const btnUndo = document.getElementById("btn-undo");
   const btnSim = document.getElementById("btn-simulate");
+  const btnSimPrev = document.getElementById("btn-sim-prev");
   const simBanner = document.getElementById("wiring-sim-banner");
   const simProgress = document.getElementById("wiring-sim-progress");
   const simMsg = document.getElementById("wiring-sim-msg");
@@ -592,18 +593,49 @@ function goWiring(exId, diag) {
     }
   });
 
-  btnSim.addEventListener("click", async () => {
-    btnSim.disabled = true;
-    btnCheck.disabled = true;
-    logEl.innerHTML = "";
-    simBanner.classList.remove("hidden");
-    await diagram.simulate(exercise.simulation, log, (i, total) => {
-      simProgress.textContent = `Paso ${i + 1} de ${total}`;
-    });
-    simBanner.classList.add("hidden");
-    btnCheck.disabled = false;
-    btnSim.disabled = false;
+  // demostracion guiada paso a paso: el usuario decide cuando avanzar o
+  // retroceder con los botones, en vez de que corra sola contra un reloj
+  const simSteps = exercise.simulation;
+  let simIndex = -1; // -1 = todavia no ha iniciado
+
+  function renderSimControls() {
+    if (simIndex === -1) {
+      simBanner.classList.add("hidden");
+      btnSim.textContent = "▶ Iniciar demostración guiada";
+      btnSimPrev.disabled = true;
+    } else {
+      simBanner.classList.remove("hidden");
+      simProgress.textContent = `Paso ${simIndex + 1} de ${simSteps.length}`;
+      btnSim.textContent = simIndex === simSteps.length - 1 ? "Demostración completa ✓" : "Siguiente paso ▶";
+      btnSimPrev.disabled = simIndex <= 0;
+    }
+    btnSim.disabled = simIndex === simSteps.length - 1;
+  }
+
+  btnSim.addEventListener("click", () => {
+    if (simIndex === -1) {
+      diagram.resetSimVisuals();
+      logEl.innerHTML = "";
+      simIndex = 0;
+    } else if (simIndex < simSteps.length - 1) {
+      simIndex++;
+    } else {
+      return;
+    }
+    simSteps[simIndex].run(diagram, log); // no se espera: la parte sincrona (mensaje + cambio de estado) ya aplico
+    renderSimControls();
   });
+
+  btnSimPrev.addEventListener("click", () => {
+    if (simIndex <= 0) return;
+    simIndex--;
+    diagram.resetSimVisuals();
+    logEl.innerHTML = "";
+    for (let i = 0; i <= simIndex; i++) simSteps[i].run(diagram, log);
+    renderSimControls();
+  });
+
+  renderSimControls();
 }
 
 /* ---------------- Pantalla de cableado combinada (control + fuerza) ---------------- */
@@ -624,6 +656,7 @@ function goWiringCombined(exId) {
   const statusP = document.getElementById("wiringc-status-p");
   const logEl = document.getElementById("wiringc-log");
   const btnSim = document.getElementById("btnc-simulate");
+  const btnSimPrev = document.getElementById("btnc-sim-prev");
   const btnHint = document.getElementById("btnc-hint");
   const simBanner = document.getElementById("wiringc-sim-banner");
   const simProgress = document.getElementById("wiringc-sim-progress");
@@ -730,20 +763,54 @@ function goWiringCombined(exId) {
     statusEl.className = "wiring-status status-warn";
   });
 
-  btnSim.addEventListener("click", async () => {
-    btnSim.disabled = true;
-    logEl.innerHTML = "";
-    simBanner.classList.remove("hidden");
+  // demostracion guiada paso a paso (control + fuerza juntos), igual que en
+  // el modo de un solo diagrama: el usuario avanza y retrocede a su ritmo
+  const simSteps = exercise.simulation;
+  let simIndex = -1;
+
+  function resetBothVisuals() {
     dControl.resetSimVisuals();
     dPower.resetSimVisuals();
-    const steps = exercise.simulation;
-    for (let i = 0; i < steps.length; i++) {
-      simProgress.textContent = `Paso ${i + 1} de ${steps.length}`;
-      await steps[i].run(dControl, dPower, log);
+  }
+
+  function renderSimControls() {
+    if (simIndex === -1) {
+      simBanner.classList.add("hidden");
+      btnSim.textContent = "▶ Iniciar demostración guiada";
+      btnSimPrev.disabled = true;
+    } else {
+      simBanner.classList.remove("hidden");
+      simProgress.textContent = `Paso ${simIndex + 1} de ${simSteps.length}`;
+      btnSim.textContent = simIndex === simSteps.length - 1 ? "Demostración completa ✓" : "Siguiente paso ▶";
+      btnSimPrev.disabled = simIndex <= 0;
     }
-    simBanner.classList.add("hidden");
-    btnSim.disabled = false;
+    btnSim.disabled = simIndex === simSteps.length - 1;
+  }
+
+  btnSim.addEventListener("click", () => {
+    if (simIndex === -1) {
+      resetBothVisuals();
+      logEl.innerHTML = "";
+      simIndex = 0;
+    } else if (simIndex < simSteps.length - 1) {
+      simIndex++;
+    } else {
+      return;
+    }
+    simSteps[simIndex].run(dControl, dPower, log);
+    renderSimControls();
   });
+
+  btnSimPrev.addEventListener("click", () => {
+    if (simIndex <= 0) return;
+    simIndex--;
+    resetBothVisuals();
+    logEl.innerHTML = "";
+    for (let i = 0; i <= simIndex; i++) simSteps[i].run(dControl, dPower, log);
+    renderSimControls();
+  });
+
+  renderSimControls();
 }
 
 /* ---------------- Planos de referencia ---------------- */

@@ -334,6 +334,9 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .log-line { padding: 4px 0; border-bottom: 1px dashed var(--line); }
 .log-line:last-child { border-bottom: none; color: var(--ink); }
 
+.sim-controls { display: flex; gap: 8px; }
+.sim-controls .btn { flex: 1; }
+
 /* banner grande y pausado de la demostracion guiada: el mensaje del paso
    actual se ve de un vistazo, en vez de tener que leerlo en la bitacora
    pequena que va desplazandose */
