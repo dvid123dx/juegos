@@ -548,7 +548,7 @@ function goWiring(exId, diag) {
     if (val.perfect) {
       statusEl.textContent = exercise.source
         ? `¡Circuito correcto! (${val.correctNets}/${val.totalNets} nodos) — ya puedes presionar los botones (arriba, en el plano, o en el panel 3D) para operar el circuito en tiempo real.`
-        : `¡Circuito correcto! (${val.correctNets}/${val.totalNets} nodos)`;
+        : `¡Circuito correcto! (${val.correctNets}/${val.totalNets} nodos) — este es el circuito de FUERZA: no tiene botones propios. Ve al circuito de CONTROL de este mismo reto y opéralo desde ahí para ver el motor responder.`;
       statusEl.className = "wiring-status status-ok";
       if (window.SFX) SFX.success();
       if (!solvedOnce) {
@@ -671,13 +671,35 @@ function goWiringCombined(exId) {
     if (panel3d) panel3d.refresh();
   }
 
+  // puente en vivo control -> fuerza: un contactor real cierra sus polos de
+  // potencia con la MISMA bobina que sella su circuito de control, asi que
+  // operar el panel (o los botones del plano de control) debe encenderle el
+  // motor/carga en el plano de fuerza de inmediato, no solo durante la
+  // demostracion guiada con pasos. Cada componente de fuerza puede declarar
+  // closedWhen / runWhen / energizedWhen con el id (o lista de ids) de la
+  // bobina de control de la que depende.
+  let dPower; // asignado abajo; declarado antes para que el primer solve() de dControl (que corre en su propio constructor) no truene al buscarlo
+  function coilIsEnergized(idOrList) {
+    if (Array.isArray(idOrList)) return idOrList.some((id) => dControl.isEnergized(id));
+    return dControl.isEnergized(idOrList);
+  }
+  function syncPowerLive() {
+    if (!dPower) return;
+    for (const comp of exercise.power.components) {
+      if (comp.closedWhen) dPower.setClosed(comp.id, coilIsEnergized(comp.closedWhen));
+      if (comp.runWhen) dPower.setRunning(comp.id, coilIsEnergized(comp.runWhen));
+      if (comp.energizedWhen) dPower.setEnergized(comp.id, coilIsEnergized(comp.energizedWhen));
+    }
+  }
+
   const dControl = new Diagram(document.getElementById("wiringc-svg-c"), exercise.control, {
     onChange: () => { statusC.textContent = `Cables colocados: ${dControl.wireCount()}`; statusC.className = "pane-status"; },
-    onSolve: () => refreshPanel3D(),
+    onSolve: () => { refreshPanel3D(); syncPowerLive(); },
   });
-  const dPower = new Diagram(document.getElementById("wiringc-svg-p"), exercise.power, {
+  dPower = new Diagram(document.getElementById("wiringc-svg-p"), exercise.power, {
     onChange: () => { statusP.textContent = `Cables colocados: ${dPower.wireCount()}`; statusP.className = "pane-status"; },
   });
+  syncPowerLive();
 
   if (exercise.control.source) {
     panelSection.classList.remove("hidden");

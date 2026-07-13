@@ -1052,7 +1052,11 @@ class Diagram {
   /* ---------------- tiempo real: presionar botones y ver la corriente ---------------- */
 
   _bindManualControls() {
-    if (!this.exercise.source) return;
+    // los circuitos de fuerza no tienen "source"/"return" (no hay logica de
+    // relevos que resolver ahi), pero sus interruptores manuales (guardamotor,
+    // disyuntor) siguen debiendo poder accionarse con un clic directo en el
+    // plano — antes esto se saltaba por completo si el ejercicio no tenia
+    // fuente, dejando esos controles inertes
     for (const comp of this.exercise.components) {
       if (!comp.manual && !comp.toggle) continue;
       this._bindOneManualControl(comp);
