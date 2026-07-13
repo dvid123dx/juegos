@@ -224,7 +224,7 @@ function goExplorer() {
     list.querySelectorAll(".explorer-item").forEach((el, idx) => el.classList.toggle("active", idx === i));
     buildCube(comp);
     applyRot();
-    info.innerHTML = `<h3>${comp.name}</h3><div class="explorer-tag">${comp.tag}</div><p>${comp.desc}</p>`;
+    info.innerHTML = `<h3>${comp.name}</h3><div class="explorer-tag">${comp.tag}</div><p>${comp.desc}</p>${comp.notes ? `<p class="explorer-notes">🔧 ${comp.notes}</p>` : ""}`;
   }
 
   selectComponent(0);
