@@ -2655,6 +2655,143 @@ const atsControl = {
   ],
 };
 
+/* =========================================================
+   EJERCICIO: Cadena de Paro por Cable en Banda Transportadora — CONTROL
+   ========================================================= */
+
+const pullCordChainControl = {
+  id: "pullcord-chain-control",
+  level: 1,
+  group: "seguridad",
+  kind: "control",
+  title: "Cadena de Paro de Emergencia por Cable (Pull-Cord) — Circuito de Control",
+  brief: "Cablea tres paros de emergencia (E1, E2, E3) EN SERIE a lo largo de la banda transportadora: cualquiera de los tres, al jalarse, abre toda la cadena y desenergiza el relé de seguridad KA. KA se rearma con S3 y habilita, a través de sus auxiliares, la marcha del motor de la banda (S1/S0/K1) y los pilotos H1 (línea segura) y H2 (paro activado).",
+  vb: [860, 560],
+  source: ["railL"],
+  return: ["railN"],
+  components: [
+    railComp("railL", true, 720, "L", 430, 60),
+    railComp("railN", true, 720, "N", 430, 520),
+    C("E1", "E1", TPL.emergencyStop("E1", "1", "2"), 120, 140, { manual: true }),
+    C("E2", "E2", TPL.emergencyStop("E2", "1", "2"), 260, 140, { manual: true }),
+    C("E3", "E3", TPL.emergencyStop("E3", "1", "2"), 400, 140, { manual: true }),
+    C("KAaux2", "KA (barra segura)", TPL.contact("NO", "23-24", "23", "24"), 540, 140, { derivedFrom: "KAcoil" }),
+    C("KAaux3", "KA", TPL.contact("NO", "33-34", "33", "34"), 660, 140, { derivedFrom: "KAcoil" }),
+    C("KAaux4", "KA", TPL.contact("NC", "41-42", "41", "42"), 780, 140, { derivedFrom: "KAcoil" }),
+    C("H1", "H1 línea segura", TPL.lamp("H1", "green"), 660, 220),
+    C("H2", "H2 paro activado", TPL.lamp("H2", "red"), 780, 220),
+    C("S3", "S3 Rearme", TPL.button("NO", "3-4", "3", "4"), 120, 220, { manual: true }),
+    C("KAaux1", "KA (sello)", TPL.contact("NO", "13-14", "13", "14"), 220, 220, { derivedFrom: "KAcoil" }),
+    C("KAcoil", "KA", TPL.coil("KA", "cadena segura"), 120, 320),
+    C("S1", "S1 Marcha banda", TPL.button("NO", "3-4", "3", "4"), 300, 380, { manual: true }),
+    C("K1aux1", "K1 (sello)", TPL.contact("NO", "13-14", "13", "14"), 420, 380, { derivedFrom: "K1coil" }),
+    C("K1coil", "K1", TPL.coil("K1", "banda"), 300, 460),
+  ],
+  nets: [
+    ["railL", "E1.1", "KAaux2.23", "KAaux3.33", "KAaux4.41"],
+    ["E1.2", "E2.1"],
+    ["E2.2", "E3.1"],
+    ["E3.2", "S3.3", "KAaux1.13"],
+    ["S3.4", "KAaux1.14", "KAcoil.A1"],
+    ["KAaux2.24", "S1.3", "K1aux1.13"],
+    ["S1.4", "K1aux1.14", "K1coil.A1"],
+    ["KAaux3.34", "H1.X1"],
+    ["KAaux4.42", "H2.X1"],
+    ["railN", "KAcoil.A2", "K1coil.A2", "H1.X2", "H2.X2"],
+  ],
+  simulation: [
+    logStep("Al inicio KA está desenergizada: H2 (rojo) indica que la cadena de paro no ha sido rearmada."),
+    logStep("Presionas S3 para rearmar la cadena de seguridad..."),
+    actStep((d) => { d.setClosed("S3", true); }, null, 500),
+    actStep((d) => {
+      d.setEnergized("KAcoil", true);
+      d.setClosed("KAaux1", true);
+      d.setClosed("KAaux2", true);
+      d.setClosed("KAaux3", true);
+      d.setClosed("KAaux4", false);
+      d.setEnergized("H1", true);
+      d.setEnergized("H2", false);
+    }, "KA se energiza y se sella: E1, E2 y E3 están los tres cerrados (nadie jaló el cable). H1 enciende.", 900),
+    actStep((d) => { d.setClosed("S3", false); }, "Sueltas S3 — KA se mantiene sellada.", 700),
+    logStep("Presionas S1 y arrancas la banda..."),
+    actStep((d) => {
+      d.setClosed("S1", true);
+      d.setEnergized("K1coil", true);
+      d.setClosed("K1aux1", true);
+    }, "K1 arranca la banda.", 900),
+    actStep((d) => { d.setClosed("S1", false); }, "Sueltas S1 — K1 se sella.", 700),
+    logStep("Alguien jala el cable en la estación E2, a la mitad de la banda (sin tocar E1 ni E3)..."),
+    actStep((d) => {
+      d.setClosed("E2", false);
+      d.setEnergized("KAcoil", false);
+      d.setClosed("KAaux1", false);
+      d.setClosed("KAaux2", false);
+      d.setClosed("KAaux3", false);
+      d.setClosed("KAaux4", true);
+      d.setEnergized("H1", false);
+      d.setEnergized("H2", true);
+      d.setEnergized("K1coil", false);
+      d.setClosed("K1aux1", false);
+    }, "Basta con abrir UN solo punto de la cadena para que KA se desenergice y la banda se detenga — así funciona una cadena de seguridad en serie.", 1200),
+    actStep((d) => { d.setClosed("E2", true); }, "Se repone el cable en E2 (vuelve a cerrar) — pero, igual que con un E-stop, KA no rearma sola: hay que presionar S3 de nuevo.", 900),
+  ],
+};
+
+/* =========================================================
+   EJERCICIO: Calentador Anticondensación de Motor — CONTROL
+   ========================================================= */
+
+const antiCondensationHeaterControl = {
+  id: "anti-condensation-heater-control",
+  level: 1,
+  group: "calefaccion",
+  kind: "control",
+  title: "Calentador Anticondensación de Motor — Circuito de Control",
+  brief: "Cablea el arranque-paro con sello de siempre (S0, S1, sello K1aux1, bobina K1) y agrega HTR1, el calentador anticondensación del motor, alimentado a través del contacto auxiliar NC de K1 (K1aux2): HTR1 debe encender SOLO cuando el motor está detenido, y apagarse en cuanto el motor arranca — nunca los dos a la vez.",
+  vb: [560, 560],
+  source: ["railL"],
+  return: ["railN"],
+  components: [
+    railComp("railL", true, 420, "L", 300, 60),
+    railComp("railN", true, 420, "N", 300, 500),
+    C("F2", "F2 térmico", TPL.contact("NC", "95-96", "95", "96"), 220, 130),
+    C("S0", "S0 Paro", TPL.button("NC", "1-2", "1", "2"), 220, 210, { manual: true }),
+    C("S1", "S1 Marcha", TPL.button("NO", "3-4", "3", "4"), 170, 300, { manual: true }),
+    C("K1aux1", "K1 (sello)", TPL.contact("NO", "13-14", "13", "14"), 270, 300, { derivedFrom: "K1coil" }),
+    C("K1coil", "K1", TPL.coil("K1", "motor"), 220, 400),
+    C("K1aux2", "K1 (anticondensación)", TPL.contact("NC", "21-22", "21", "22"), 400, 150, { derivedFrom: "K1coil" }),
+    C("HTR1", "HTR1 calentador", TPL.lamp("HTR1", "red"), 400, 240),
+  ],
+  nets: [
+    ["railL", "F2.95", "K1aux2.21"],
+    ["F2.96", "S0.1"],
+    ["S0.2", "S1.3", "K1aux1.13"],
+    ["S1.4", "K1aux1.14", "K1coil.A1"],
+    ["K1aux2.22", "HTR1.X1"],
+    ["railN", "K1coil.A2", "HTR1.X2"],
+  ],
+  simulation: [
+    logStep("El motor está apagado: K1aux2 (NC) permanece cerrado, así que HTR1 está encendido."),
+    actStep((d) => { d.setEnergized("HTR1", true); }, "HTR1 mantiene tibio el interior del motor para evitar condensación mientras está parado.", 900),
+    logStep("Presionas S1 (marcha)..."),
+    actStep((d) => { d.setClosed("S1", true); }, null, 500),
+    actStep((d) => {
+      d.setEnergized("K1coil", true);
+      d.setClosed("K1aux1", true);
+      d.setClosed("K1aux2", false);
+      d.setEnergized("HTR1", false);
+    }, "K1 se energiza: el motor arranca y K1aux2 abre, apagando HTR1 automáticamente — nunca deben estar el motor y el calentador encendidos a la vez.", 1100),
+    actStep((d) => { d.setClosed("S1", false); }, "Sueltas S1 — K1 se mantiene sellado.", 700),
+    logStep("Presionas S0 (paro)..."),
+    actStep((d) => {
+      d.setEnergized("K1coil", false);
+      d.setClosed("K1aux1", false);
+      d.setClosed("K1aux2", true);
+      d.setEnergized("HTR1", true);
+    }, "El motor se detiene y K1aux2 vuelve a cerrar: HTR1 enciende de nuevo para proteger el motor mientras esté parado.", 1000),
+  ],
+};
+
 const EXERCISES = [
   dolControl, dolPower, revControl, ydControl, ydPower, autoControl, autoPower,
   twoSpeedControl, twoSpeedPower, alarmControl,
@@ -2666,6 +2803,7 @@ const EXERCISES = [
   dualFloatPumpCombined, capacitorBankCombined, trafficLightSequencer,
   slidingDoorCombined, estopMcrControl, compressorControl, photoSorterControl,
   hvacFanControl, sumpPumpControl, airlockInterlockControl, atsControl,
+  pullCordChainControl, antiCondensationHeaterControl,
 ];
 
 /* =========================================================
@@ -2980,4 +3118,10 @@ const QUIZ = [
   { q: "En una transferencia automática (ATS), ¿por qué KN (red normal) y KE (generador) deben estar enclavados entre sí?", a: ["Para ahorrar cableado dentro del gabinete del tablero", "Para impedir que ambas fuentes alimenten la carga al mismo tiempo", "Porque así lo exige únicamente el color de los botones de mando", "Para que el generador arranque más rápido en cada falla"], correct: 1 },
   { q: "¿Para qué sirve el temporizador KT en un circuito de transferencia automática (ATS)?", a: ["Para retardar el cierre de KE mientras arranca y estabiliza el generador", "Para medir la corriente que consume la carga conectada", "Para invertir el sentido de giro del generador", "Para encender la lámpara piloto de la red normal"], correct: 0 },
   { q: "Al restablecerse la red eléctrica normal en una ATS ya transferida al generador, ¿qué debe ocurrir?", a: ["El generador se queda encendido permanentemente junto con la red", "KE se desenergiza y KN vuelve a alimentar la carga, sin que ambas coincidan", "Se disparan las dos fuentes a la vez por seguridad", "No pasa nada hasta apagar manualmente el generador"], correct: 1 },
+
+  // ---- Cadenas de seguridad y proteccion complementaria ----
+  { q: "En una cadena de paro por cable (pull-cord) con tres estaciones E1, E2 y E3 en serie, ¿qué pasa si solo se jala el cable en E2?", a: ["Solo se detiene la sección de la banda cercana a E2", "El relé de seguridad KA se desenergiza igual que con cualquiera de las tres", "No pasa nada, porque E1 y E3 siguen cerrados", "Se invierte el sentido de giro de la banda automáticamente"], correct: 1 },
+  { q: "¿Por qué los E-stops de una cadena de paro por cable se conectan en SERIE y no en paralelo?", a: ["Porque en serie es más barato el cableado del tablero", "Para que abrir cualquiera de ellos corte la alimentación de toda la cadena", "Porque en paralelo los botones se dañarían con el tiempo", "No hay ninguna razón técnica real, es solo costumbre"], correct: 1 },
+  { q: "En un calentador anticondensación de motor alimentado por el auxiliar NC de K1, ¿cuándo debe estar encendido HTR1?", a: ["Únicamente mientras el motor está en marcha", "Únicamente mientras el motor está detenido", "Todo el tiempo, sin importar el estado del motor", "Solo durante el arranque, los primeros segundos"], correct: 1 },
+  { q: "¿Qué pasaría si el calentador anticondensación se alimentara por un contacto NA de K1 en vez de uno NC?", a: ["Funcionaría exactamente igual, no hay diferencia real", "Encendería con el motor en marcha, justo al revés de lo deseado", "El motor no podría arrancar nunca", "El térmico se dispararía de inmediato al energizar K1"], correct: 1 },
 ];

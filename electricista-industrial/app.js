@@ -58,6 +58,7 @@ const GROUP_LABELS = {
   sensores: "Sensores y Clasificación",
   hvac: "HVAC y Ventilación",
   respaldo: "Energía de Respaldo (ATS)",
+  calefaccion: "Calefacción y Protección de Motores",
 };
 
 const LEVEL_LABELS = {
