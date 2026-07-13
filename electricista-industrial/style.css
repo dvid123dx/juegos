@@ -334,6 +334,26 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .log-line { padding: 4px 0; border-bottom: 1px dashed var(--line); }
 .log-line:last-child { border-bottom: none; color: var(--ink); }
 
+/* banner grande y pausado de la demostracion guiada: el mensaje del paso
+   actual se ve de un vistazo, en vez de tener que leerlo en la bitacora
+   pequena que va desplazandose */
+.sim-banner {
+  border: 1px solid var(--accent2); border-radius: 10px; padding: 12px 14px;
+  background: linear-gradient(160deg, rgba(255,157,46,0.14), rgba(255,157,46,0.04));
+  box-shadow: 0 0 0 1px rgba(255,157,46,0.15), 0 6px 20px rgba(0,0,0,0.35);
+  animation: simBannerIn 0.3s ease-out;
+}
+.sim-banner.hidden { display: none; }
+.sim-banner-progress {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase;
+  color: var(--accent2); margin-bottom: 6px;
+}
+.sim-banner-msg { font-size: 15px; font-weight: 600; line-height: 1.4; color: var(--ink); }
+@keyframes simBannerIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* ---------------- SVG symbols (estilo 3D / hardware realista) ---------------- */
 
 .rail-label { fill: #dbe7ff; font-size: 15px; font-weight: 700; font-family: monospace; }
@@ -485,10 +505,11 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .wire-group.wire-selected .cable-tube { stroke: #ffe36b !important; filter: drop-shadow(0 0 4px #ffe36b); }
 
 /* destello: un pulso breve y notorio en cualquier pieza que cambie de estado */
-.component.state-flash { animation: stateFlash 0.55s ease-out; }
+.component.state-flash { animation: stateFlash 1.1s ease-out; }
 @keyframes stateFlash {
   0% { filter: drop-shadow(0 0 2px #fff) brightness(1); }
-  25% { filter: drop-shadow(0 0 22px #fff) brightness(1.9); }
+  20% { filter: drop-shadow(0 0 26px #fff) brightness(2); }
+  55% { filter: drop-shadow(0 0 20px #fff) brightness(1.7); }
   100% { filter: drop-shadow(0 0 2px #fff) brightness(1); }
 }
 

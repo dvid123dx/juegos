@@ -1226,7 +1226,10 @@ class Diagram {
     void g.offsetWidth; // force reflow so the animation restarts
     g.classList.add("state-flash");
     clearTimeout(g._flashTimer);
-    g._flashTimer = setTimeout(() => g.classList.remove("state-flash"), 550);
+    // duracion generosa (mas que el viejo 550ms): la demostracion guiada ahora
+    // avanza mas despacio, y el brillo debe seguir visible mientras el
+    // usuario lee el mensaje del paso, no apagarse a la mitad
+    g._flashTimer = setTimeout(() => g.classList.remove("state-flash"), 1100);
   }
 
   _updateTimedContacts() {
@@ -1585,10 +1588,11 @@ class Diagram {
     }
   }
 
-  async simulate(steps, log) {
+  async simulate(steps, log, onStep) {
     this.resetSimVisuals();
-    for (const step of steps) {
-      await step.run(this, log);
+    for (let i = 0; i < steps.length; i++) {
+      if (onStep) onStep(i, steps.length);
+      await steps[i].run(this, log);
     }
   }
 }

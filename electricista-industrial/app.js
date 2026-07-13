@@ -500,6 +500,9 @@ function goWiring(exId, diag) {
   const btnClear = document.getElementById("btn-clear");
   const btnUndo = document.getElementById("btn-undo");
   const btnSim = document.getElementById("btn-simulate");
+  const simBanner = document.getElementById("wiring-sim-banner");
+  const simProgress = document.getElementById("wiring-sim-progress");
+  const simMsg = document.getElementById("wiring-sim-msg");
 
   let solvedOnce = false;
   let panel3d = null;
@@ -535,6 +538,7 @@ function goWiring(exId, diag) {
     p.textContent = msg;
     logEl.appendChild(p);
     logEl.scrollTop = logEl.scrollHeight;
+    simMsg.textContent = msg;
   }
 
   btnCheck.addEventListener("click", () => {
@@ -592,7 +596,11 @@ function goWiring(exId, diag) {
     btnSim.disabled = true;
     btnCheck.disabled = true;
     logEl.innerHTML = "";
-    await diagram.simulate(exercise.simulation, log);
+    simBanner.classList.remove("hidden");
+    await diagram.simulate(exercise.simulation, log, (i, total) => {
+      simProgress.textContent = `Paso ${i + 1} de ${total}`;
+    });
+    simBanner.classList.add("hidden");
     btnCheck.disabled = false;
     btnSim.disabled = false;
   });
@@ -617,6 +625,9 @@ function goWiringCombined(exId) {
   const logEl = document.getElementById("wiringc-log");
   const btnSim = document.getElementById("btnc-simulate");
   const btnHint = document.getElementById("btnc-hint");
+  const simBanner = document.getElementById("wiringc-sim-banner");
+  const simProgress = document.getElementById("wiringc-sim-progress");
+  const simMsg = document.getElementById("wiringc-sim-msg");
   const panelSection = document.getElementById("panel3d-section");
 
   let solvedOnce = false;
@@ -648,6 +659,7 @@ function goWiringCombined(exId) {
     p.textContent = msg;
     logEl.appendChild(p);
     logEl.scrollTop = logEl.scrollHeight;
+    simMsg.textContent = msg;
   }
 
   function updateOverall() {
@@ -721,11 +733,15 @@ function goWiringCombined(exId) {
   btnSim.addEventListener("click", async () => {
     btnSim.disabled = true;
     logEl.innerHTML = "";
+    simBanner.classList.remove("hidden");
     dControl.resetSimVisuals();
     dPower.resetSimVisuals();
-    for (const step of exercise.simulation) {
-      await step.run(dControl, dPower, log);
+    const steps = exercise.simulation;
+    for (let i = 0; i < steps.length; i++) {
+      simProgress.textContent = `Paso ${i + 1} de ${steps.length}`;
+      await steps[i].run(dControl, dPower, log);
     }
+    simBanner.classList.add("hidden");
     btnSim.disabled = false;
   });
 }

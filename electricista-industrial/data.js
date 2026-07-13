@@ -13,15 +13,20 @@ function tapsAlong(xs, dy) { return xs.map((dx) => ({ dx, dy })); }
 
 /* ---------------- helpers de simulacion ---------------- */
 
+// ritmo de la demostracion guiada: multiplica todas las esperas entre pasos
+// para que cada cambio sea facil de leer y de asociar con lo que se resalta
+// en el plano, en vez de pasar en un parpadeo
+const SIM_SPEED = 2;
+
 function logStep(msg) {
-  return { run: async (d, log) => { log(msg); await sleep(650); } };
+  return { run: async (d, log) => { log(msg); await sleep(650 * SIM_SPEED); } };
 }
 function actStep(fn, msg, wait) {
   return {
     run: async (d, log) => {
       if (msg) log(msg);
       fn(d);
-      await sleep(wait || 650);
+      await sleep((wait || 650) * SIM_SPEED);
     },
   };
 }
@@ -29,14 +34,14 @@ function actStep(fn, msg, wait) {
 // dual-diagram versions for `combined: true` exercises, whose simulation
 // script drives the control diagram AND the power diagram together
 function cLogStep(msg) {
-  return { run: async (dc, dp, log) => { log(msg); await sleep(650); } };
+  return { run: async (dc, dp, log) => { log(msg); await sleep(650 * SIM_SPEED); } };
 }
 function cActStep(fn, msg, wait) {
   return {
     run: async (dc, dp, log) => {
       if (msg) log(msg);
       fn(dc, dp);
-      await sleep(wait || 650);
+      await sleep((wait || 650) * SIM_SPEED);
     },
   };
 }
