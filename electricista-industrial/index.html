@@ -341,6 +341,97 @@
         </ul>
       </div>
 
+      <div class="ref-card">
+        <h3>Guía de fallas por síntoma</h3>
+        <table class="ref-table">
+          <tr><th>Síntoma</th><th>Causa probable</th><th>Dónde revisar</th></tr>
+          <tr><td>El motor no arranca al presionar marcha</td><td>Térmico disparado, fusible abierto, o el paro no regresó a reposo</td><td>F2 (95-96), fusibles, S0</td></tr>
+          <tr><td>El motor arranca pero no se sella</td><td>Falta el contacto de sello (13-14) o está mal conectado</td><td>K1aux1 en paralelo con el botón de marcha</td></tr>
+          <tr><td>Arranca directo, sin pasar por la etapa reducida</td><td>Contactos instantáneo/retardado del temporizador cruzados</td><td>KT (15-16 vs. 15-18)</td></tr>
+          <tr><td>Dos contactores enclavados energizan juntos</td><td>Falla de enclavamiento eléctrico (o mecánico)</td><td>Contactos NC cruzados de enclavamiento</td></tr>
+          <tr><td>El motor gira al revés de lo esperado</td><td>Botones de mando cruzados, o dos fases invertidas en fuerza</td><td>Botones S1/S2, terminales U/V/W del motor</td></tr>
+          <tr><td>El piloto no enciende con el motor en marcha</td><td>Contacto auxiliar de señalización mal conectado o foco fundido</td><td>K1aux2/K1aux3, la lámpara misma</td></tr>
+          <tr><td>El compresor o la bomba nunca se detiene</td><td>El presostato/flotador quedó en NA en vez de NC, o descalibrado</td><td>PS1 / FS1</td></tr>
+          <tr><td>La alarma sonora no suena</td><td>El sensor no cierra su contacto, o falta alimentación al sello</td><td>LS1/sensor, relé auxiliar CR</td></tr>
+          <tr><td>Ambos motores se detienen sin razón aparente</td><td>El relé maestro (KA) se desenergizó — revisa el E-stop y su rearme</td><td>E-stop, botón de rearme, KAaux</td></tr>
+        </table>
+      </div>
+
+      <div class="ref-card">
+        <h3>Calibre de conductores (AWG) y ampacidad aproximada</h3>
+        <table class="ref-table">
+          <tr><th>AWG</th><th>Ampacidad aprox. (cobre, 75°C)</th></tr>
+          <tr><td>14</td><td>20 A</td></tr>
+          <tr><td>12</td><td>25 A</td></tr>
+          <tr><td>10</td><td>35 A</td></tr>
+          <tr><td>8</td><td>50 A</td></tr>
+          <tr><td>6</td><td>65 A</td></tr>
+          <tr><td>4</td><td>85 A</td></tr>
+          <tr><td>2</td><td>115 A</td></tr>
+          <tr><td>1/0</td><td>150 A</td></tr>
+          <tr><td>2/0</td><td>175 A</td></tr>
+          <tr><td>4/0</td><td>230 A</td></tr>
+        </table>
+        <p class="ref-note">Valores de referencia educativa (similares a NEC/NOM tabla 310). Un diseño real siempre debe aplicar factores de corrección por temperatura ambiente y agrupamiento de conductores, y usar la tabla vigente de la norma aplicable.</p>
+      </div>
+
+      <div class="ref-card">
+        <h3>Corriente a plena carga (FLA) aproximada de motores trifásicos</h3>
+        <table class="ref-table">
+          <tr><th>Potencia</th><th>220V (A)</th><th>440V (A)</th></tr>
+          <tr><td>1 HP</td><td>4.6</td><td>2.3</td></tr>
+          <tr><td>2 HP</td><td>7.5</td><td>3.8</td></tr>
+          <tr><td>3 HP</td><td>10.6</td><td>5.3</td></tr>
+          <tr><td>5 HP</td><td>16.7</td><td>8.4</td></tr>
+          <tr><td>7.5 HP</td><td>24.2</td><td>12.1</td></tr>
+          <tr><td>10 HP</td><td>30.8</td><td>15.4</td></tr>
+          <tr><td>15 HP</td><td>46.2</td><td>23.1</td></tr>
+          <tr><td>20 HP</td><td>59.4</td><td>29.7</td></tr>
+          <tr><td>25 HP</td><td>74.8</td><td>37.4</td></tr>
+        </table>
+        <p class="ref-note">Valores típicos para motores de inducción jaula de ardilla (referencia similar a NEC 430.250). El dato de placa del motor real siempre tiene prioridad sobre cualquier tabla genérica.</p>
+      </div>
+
+      <div class="ref-card">
+        <h3>Tamaños de arrancador (NEMA) y guardamotor (IEC) aproximados</h3>
+        <table class="ref-table">
+          <tr><th>Tamaño NEMA</th><th>Amperaje continuo</th><th>HP aprox. @ 460V</th></tr>
+          <tr><td>00</td><td>9 A</td><td>1.5 HP</td></tr>
+          <tr><td>0</td><td>18 A</td><td>3 HP</td></tr>
+          <tr><td>1</td><td>27 A</td><td>7.5 HP</td></tr>
+          <tr><td>2</td><td>45 A</td><td>15 HP</td></tr>
+          <tr><td>3</td><td>90 A</td><td>30 HP</td></tr>
+          <tr><td>4</td><td>135 A</td><td>50 HP</td></tr>
+        </table>
+        <p class="ref-note">IEC no usa "tamaños" fijos como NEMA — clasifica el contactor directamente por su corriente nominal en categoría AC-3. Siempre coteja ambas normas contra el dato de placa del motor.</p>
+      </div>
+
+      <div class="ref-card">
+        <h3>Organismos y normas de referencia</h3>
+        <ul class="ref-list">
+          <li><strong>NOM-001-SEDE</strong> (México): norma oficial de instalaciones eléctricas.</li>
+          <li><strong>NOM-029-STPS</strong> (México): seguridad para trabajos con electricidad.</li>
+          <li><strong>NEC / NFPA 70</strong> (EUA): National Electrical Code.</li>
+          <li><strong>NFPA 70E</strong> (EUA): seguridad eléctrica en el lugar de trabajo (riesgo de arco).</li>
+          <li><strong>IEC 60947 / IEC 60204-1</strong>: aparamenta de baja tensión y seguridad eléctrica de maquinaria.</li>
+          <li><strong>UL / CSA</strong>: certificación y listado de equipo en EUA/Canadá.</li>
+        </ul>
+        <p class="ref-note">Esta app es una herramienta de práctica y estudio — para un diseño o instalación real, consulta siempre la norma vigente y a un profesional certificado.</p>
+      </div>
+
+      <div class="ref-card">
+        <h3>Lista de verificación: puesta en marcha de un arrancador nuevo</h3>
+        <ul class="ref-list">
+          <li>Confirma que el guardamotor/interruptor esté en posición de apagado antes de cablear.</li>
+          <li>Verifica continuidad y ausencia de cortos con el circuito desenergizado (multímetro en óhmetro).</li>
+          <li>Revisa que el ajuste del relé térmico corresponda a la corriente de placa del motor (FLA).</li>
+          <li>Energiza primero solo el circuito de control (si hay transformador de control, verifica su tensión secundaria) antes de energizar fuerza.</li>
+          <li>Presiona marcha y confirma que el motor gire en el sentido correcto antes de acoplarlo a la carga mecánica.</li>
+          <li>Verifica que el paro (normal y de emergencia, si existe) corte el motor de inmediato.</li>
+          <li>Documenta cualquier cambio de cableado respecto al plano original.</li>
+        </ul>
+      </div>
+
     </div>
   </section>
 </template>

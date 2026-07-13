@@ -2394,6 +2394,267 @@ const photoSorterControl = {
   ],
 };
 
+/* =========================================================
+   EJERCICIO: Ventilador con Termostato de Alto Límite — CONTROL
+   ========================================================= */
+
+const hvacFanControl = {
+  id: "hvac-fan-control",
+  level: 1,
+  group: "hvac",
+  kind: "control",
+  title: "Ventilador de Extracción con Termostato de Alto Límite — Circuito de Control",
+  brief: "Cablea el clásico arranque-paro con sello (S0, S1, sello K1aux1) pero protegido por TH1: un termostato de alto límite (normalmente cerrado) que corta la alimentación del ventilador de inmediato si el ducto se calienta demasiado, igual que un térmico pero por temperatura. Agrega H1 (en marcha) y H2 (detenido/falla).",
+  vb: [560, 560],
+  source: ["railL"],
+  return: ["railN"],
+  components: [
+    railComp("railL", true, 420, "L", 300, 60),
+    railComp("railN", true, 420, "N", 300, 500),
+    C("TH1", "TH1 alto límite", TPL.pressureSwitch("NC", "1-2", "1", "2"), 220, 130, { manual: true }),
+    C("S0", "S0 Paro", TPL.button("NC", "1-2", "1", "2"), 220, 210, { manual: true }),
+    C("S1", "S1 Marcha", TPL.button("NO", "3-4", "3", "4"), 170, 300, { manual: true }),
+    C("K1aux1", "K1 (sello)", TPL.contact("NO", "13-14", "13", "14"), 270, 300, { derivedFrom: "K1coil" }),
+    C("K1coil", "K1", TPL.coil("K1", "ventilador"), 220, 400),
+    C("K1aux2", "K1", TPL.contact("NO", "23-24", "23", "24"), 400, 150, { derivedFrom: "K1coil" }),
+    C("H1", "H1 en marcha", TPL.lamp("H1", "green"), 400, 240),
+    C("K1aux3", "K1", TPL.contact("NC", "21-22", "21", "22"), 480, 150, { derivedFrom: "K1coil" }),
+    C("H2", "H2 detenido", TPL.lamp("H2", "red"), 480, 240),
+  ],
+  nets: [
+    ["railL", "TH1.1", "K1aux2.23", "K1aux3.21"],
+    ["TH1.2", "S0.1"],
+    ["S0.2", "S1.3", "K1aux1.13"],
+    ["S1.4", "K1aux1.14", "K1coil.A1"],
+    ["railN", "K1coil.A2", "H1.X2", "H2.X2"],
+    ["K1aux2.24", "H1.X1"],
+    ["K1aux3.22", "H2.X1"],
+  ],
+  simulation: [
+    logStep("El ducto está a temperatura normal: TH1 permanece cerrado."),
+    logStep("Presionas S1 (marcha)..."),
+    actStep((d) => { d.setClosed("S1", true); }, null, 500),
+    actStep((d) => {
+      d.setEnergized("K1coil", true);
+      d.setClosed("K1aux1", true);
+      d.setClosed("K1aux2", true);
+      d.setClosed("K1aux3", false);
+      d.setEnergized("H1", true);
+      d.setEnergized("H2", false);
+    }, "K1 se energiza y se sella. El ventilador arranca.", 900),
+    actStep((d) => { d.setClosed("S1", false); }, "Sueltas S1 — K1 se mantiene por el sello.", 800),
+    logStep("La temperatura del ducto sube demasiado..."),
+    actStep((d) => {
+      d.setClosed("TH1", false);
+      d.setEnergized("K1coil", false);
+      d.setClosed("K1aux1", false);
+      d.setClosed("K1aux2", false);
+      d.setClosed("K1aux3", true);
+      d.setEnergized("H1", false);
+      d.setEnergized("H2", true);
+    }, "TH1 abre por seguridad: corta la alimentación del ventilador de inmediato, sin que nadie presione S0.", 1100),
+    actStep((d) => { d.setClosed("TH1", true); }, "El ducto se enfría y TH1 vuelve a cerrar — pero el ventilador NO arranca solo: hay que presionar S1 otra vez.", 900),
+  ],
+};
+
+/* =========================================================
+   EJERCICIO: Bomba de Achique con Flotador y Alarma — CONTROL
+   ========================================================= */
+
+const sumpPumpControl = {
+  id: "sump-pump-control",
+  level: 1,
+  group: "bombeo",
+  kind: "control",
+  title: "Bomba de Achique con Flotador y Alarma de Alto Nivel — Circuito de Control",
+  brief: "Cablea el flotador FS1 (normalmente abierto) para que accione la bomba K1 directamente en cuanto sube el nivel del pozo, sin botón ni sello. Agrega un segundo flotador FS2, más alto, que dispara la bocina H1 si el nivel sigue subiendo (por ejemplo, si la bomba falla). H2 indica que la bomba está en marcha.",
+  vb: [560, 460],
+  source: ["railL"],
+  return: ["railN"],
+  components: [
+    railComp("railL", true, 420, "L", 300, 60),
+    railComp("railN", true, 420, "N", 300, 400),
+    C("FS1", "FS1 nivel normal", TPL.floatSwitch("NO", "3-4", "3", "4"), 200, 140, { manual: true }),
+    C("FS2", "FS2 nivel alto", TPL.floatSwitch("NO", "3-4", "3", "4"), 380, 140, { manual: true }),
+    C("K1aux1", "K1 (sello)", TPL.contact("NO", "13-14", "13", "14"), 200, 220, { derivedFrom: "K1coil" }),
+    C("K1coil", "K1", TPL.coil("K1", "bomba"), 200, 320),
+    C("H1", "H1 alarma alto nivel", TPL.horn("H1"), 380, 220),
+    C("H2", "H2 bomba en marcha", TPL.lamp("H2", "green"), 280, 320),
+  ],
+  nets: [
+    ["railL", "FS1.3", "FS2.3", "K1aux1.13"],
+    ["FS1.4", "K1coil.A1"],
+    ["FS2.4", "H1.X1"],
+    ["K1aux1.14", "H2.X1"],
+    ["railN", "K1coil.A2", "H1.X2", "H2.X2"],
+  ],
+  simulation: [
+    logStep("El nivel del pozo está bajo: ambos flotadores permanecen abiertos."),
+    logStep("El nivel sube y llega al flotador FS1..."),
+    actStep((d) => {
+      d.setClosed("FS1", true);
+      d.setEnergized("K1coil", true);
+      d.setClosed("K1aux1", true);
+      d.setEnergized("H2", true);
+    }, "FS1 cierra: la bomba arranca sola para desalojar el agua.", 900),
+    actStep((d) => {
+      d.setClosed("FS1", false);
+      d.setEnergized("K1coil", false);
+      d.setClosed("K1aux1", false);
+      d.setEnergized("H2", false);
+    }, "La bomba logra bajar el nivel y FS1 abre: ciclo normal completado.", 900),
+    logStep("Ahora imagina que la bomba falla y el nivel sigue subiendo hasta el segundo flotador FS2..."),
+    actStep((d) => {
+      d.setClosed("FS2", true);
+      d.setEnergized("H1", true);
+    }, "FS2 cierra: se activa la alarma sonora de alto nivel, avisando del problema antes de que el pozo se desborde.", 1000),
+    actStep((d) => {
+      d.setClosed("FS2", false);
+      d.setEnergized("H1", false);
+    }, "El nivel baja y FS2 abre de nuevo: la alarma se apaga.", 800),
+  ],
+};
+
+/* =========================================================
+   EJERCICIO: Esclusa de Acceso con Enclavamiento — CONTROL
+   ========================================================= */
+
+const airlockInterlockControl = {
+  id: "airlock-interlock-control",
+  level: 2,
+  group: "seguridad",
+  kind: "control",
+  title: "Esclusa de Acceso: Enclavamiento entre Dos Puertas — Circuito de Control",
+  brief: "Cablea una esclusa de dos puertas (A y B) que nunca pueden abrir a la vez: el botón S1A solo energiza el actuador YV1A si el interruptor de límite LSB indica que la puerta B está cerrada, y viceversa con S1B/LSA/YV1A. Es el mismo principio de enclavamiento que un arrancador reversible, aplicado a control de acceso.",
+  vb: [620, 460],
+  source: ["railL"],
+  return: ["railN"],
+  components: [
+    railComp("railL", true, 480, "L", 340, 60),
+    railComp("railN", true, 480, "N", 340, 400),
+    C("S1A", "S1A abrir puerta A", TPL.button("NO", "3-4", "3", "4"), 180, 140, { manual: true }),
+    C("LSB", "LSB puerta B cerrada", TPL.limitSwitch("NC", "1-2", "1", "2"), 180, 220, { manual: true }),
+    C("YV1A", "YV1A abre puerta A", TPL.actuator("YV1A"), 180, 320),
+    C("S1B", "S1B abrir puerta B", TPL.button("NO", "3-4", "3", "4"), 500, 140, { manual: true }),
+    C("LSA", "LSA puerta A cerrada", TPL.limitSwitch("NC", "1-2", "1", "2"), 500, 220, { manual: true }),
+    C("YV1B", "YV1B abre puerta B", TPL.actuator("YV1B"), 500, 320),
+  ],
+  nets: [
+    ["railL", "S1A.3", "S1B.3"],
+    ["S1A.4", "LSB.1"],
+    ["LSB.2", "YV1A.X1"],
+    ["S1B.4", "LSA.1"],
+    ["LSA.2", "YV1B.X1"],
+    ["railN", "YV1A.X2", "YV1B.X2"],
+  ],
+  simulation: [
+    logStep("Ambas puertas están cerradas: LSA y LSB permanecen cerrados (permiso concedido)."),
+    logStep("Presionas S1A para abrir la puerta A..."),
+    actStep((d) => {
+      d.setClosed("S1A", true);
+      d.setEnergized("YV1A", true);
+    }, "Como la puerta B está cerrada (LSB cerrado), YV1A se energiza y abre la puerta A.", 900),
+    actStep((d) => {
+      d.setClosed("S1A", false);
+      d.setEnergized("YV1A", false);
+      d.setClosed("LSA", false);
+    }, "Sueltas S1A. La puerta A queda abierta: LSA se abre, porque ya no está en su posición de cerrado.", 900),
+    logStep("Mientras la puerta A sigue abierta, alguien presiona S1B para abrir la puerta B..."),
+    actStep((d) => { d.setClosed("S1B", true); }, "Se presiona S1B, pero LSA está abierto (la puerta A no está cerrada): el permiso se niega, YV1B NO se energiza — la esclusa impide que ambas abran a la vez.", 1100),
+    actStep((d) => { d.setClosed("S1B", false); }, null, 500),
+    logStep("La puerta A se cierra de nuevo y LSA regresa a su posición de cerrado..."),
+    actStep((d) => { d.setClosed("LSA", true); }, "Con LSA cerrado otra vez, ahora sí se podría abrir la puerta B.", 800),
+    actStep((d) => {
+      d.setClosed("S1B", true);
+      d.setEnergized("YV1B", true);
+    }, "Presionas S1B: ahora YV1B se energiza y abre la puerta B.", 900),
+    actStep((d) => {
+      d.setClosed("S1B", false);
+      d.setEnergized("YV1B", false);
+    }, "Sueltas S1B.", 600),
+  ],
+};
+
+/* =========================================================
+   EJERCICIO: Transferencia Automática de Emergencia (ATS) — CONTROL
+   ========================================================= */
+
+const atsControl = {
+  id: "ats-control",
+  level: 3,
+  group: "respaldo",
+  kind: "control",
+  title: "Transferencia Automática de Emergencia (ATS) — Circuito de Control",
+  brief: "Cablea una transferencia automática (ATS) simplificada: SELa/SELb son las dos mitades de un solo interruptor que simula el sensor de presencia de la red normal (SELa cerrado = hay red; SELb cerrado = falló la red). Si falla, el temporizador KT retarda el arranque del generador antes de que KE cierre; KNaux_i y KEaux_i se enclavan entre sí para que jamás ambas fuentes alimenten la carga a la vez. H1/H2 indican qué fuente está en línea.",
+  vb: [620, 500],
+  source: ["railL"],
+  return: ["railN"],
+  components: [
+    railComp("railL", true, 480, "L", 340, 60),
+    railComp("railN", true, 480, "N", 340, 440),
+    C("SELa", "SELa red normal", TPL.wayContact("A", "com-a", "com", "a"), 180, 140, { toggle: true, pairedWith: "SELb" }),
+    C("SELb", "SELb red falló", TPL.wayContact("B", "com-b", "com", "b"), 340, 140, { toggle: true, pairedWith: "SELa" }),
+    C("KNaux_i", "KN (interlock)", TPL.contact("NC", "21-22", "21", "22"), 180, 220, { derivedFrom: "KEcoil" }),
+    C("KNcoil", "KN", TPL.coil("KN", "red normal"), 180, 320),
+    C("KTcoil", "KT", TPL.coil("KT", "arranque gen."), 340, 220),
+    C("KTno", "KT (15-18)", TPL.contact("NO", "15-18", "15", "18"), 460, 220, { timedFrom: { coil: "KTcoil", delayMs: 2000 } }),
+    C("KEaux_i", "KE (interlock)", TPL.contact("NC", "21-22", "21", "22"), 460, 300, { derivedFrom: "KNcoil" }),
+    C("KEcoil", "KE", TPL.coil("KE", "generador"), 460, 400),
+    C("KNaux2", "KN", TPL.contact("NO", "13-14", "13", "14"), 560, 140, { derivedFrom: "KNcoil" }),
+    C("H1", "H1 red normal", TPL.lamp("H1", "green"), 560, 220),
+    C("KEaux2", "KE", TPL.contact("NO", "13-14", "13", "14"), 560, 300, { derivedFrom: "KEcoil" }),
+    C("H2", "H2 generador", TPL.lamp("H2", "red"), 560, 380),
+  ],
+  nets: [
+    ["railL", "SELa.com", "SELb.com", "KNaux2.13", "KEaux2.13"],
+    ["SELa.a", "KNaux_i.21"],
+    ["KNaux_i.22", "KNcoil.A1"],
+    ["SELb.b", "KTcoil.A1", "KTno.15"],
+    ["KTno.18", "KEaux_i.21"],
+    ["KEaux_i.22", "KEcoil.A1"],
+    ["KNaux2.14", "H1.X1"],
+    ["KEaux2.14", "H2.X1"],
+    ["railN", "KNcoil.A2", "KEcoil.A2", "KTcoil.A2", "H1.X2", "H2.X2"],
+  ],
+  simulation: [
+    logStep("La red eléctrica normal está presente: SELa cerrado, SELb abierto."),
+    actStep((d) => {
+      d.setEnergized("KNcoil", true);
+      d.setClosed("KNaux2", true);
+      d.setEnergized("H1", true);
+    }, "KN está energizado de inmediato: la carga se alimenta de la red normal.", 900),
+    logStep("Falla la red eléctrica (apagón)..."),
+    actStep((d) => {
+      d.setClosed("SELa", false);
+      d.setClosed("SELb", true);
+      d.setEnergized("KNcoil", false);
+      d.setClosed("KNaux2", false);
+      d.setEnergized("H1", false);
+      d.setEnergized("KTcoil", true);
+    }, "SELa abre y SELb cierra: KN se desenergiza y KT inicia la cuenta para arrancar el generador.", 1100),
+    logStep("Después del retardo, KT cierra su contacto 15-18..."),
+    actStep((d) => {
+      d.setClosed("KTno", true);
+      d.setEnergized("KEcoil", true);
+      d.setClosed("KEaux2", true);
+      d.setEnergized("H2", true);
+    }, "KE se energiza: la carga se transfiere al generador. El enclavamiento impide que KN pudiera cerrar al mismo tiempo.", 1100),
+    logStep("La red eléctrica se restablece..."),
+    actStep((d) => {
+      d.setClosed("SELa", true);
+      d.setClosed("SELb", false);
+      d.setEnergized("KTcoil", false);
+      d.setClosed("KTno", false);
+      d.setEnergized("KEcoil", false);
+      d.setClosed("KEaux2", false);
+      d.setEnergized("H2", false);
+      d.setEnergized("KNcoil", true);
+      d.setClosed("KNaux2", true);
+      d.setEnergized("H1", true);
+    }, "SELa vuelve a cerrar: la carga regresa a la red normal y KE se desenergiza — nunca ambas fuentes alimentan la carga a la vez.", 1200),
+  ],
+};
+
 const EXERCISES = [
   dolControl, dolPower, revControl, ydControl, ydPower, autoControl, autoPower,
   twoSpeedControl, twoSpeedPower, alarmControl,
@@ -2404,6 +2665,7 @@ const EXERCISES = [
   staircaseSwitches, doorbellCircuit, photocellLighting, humidityFanCombined,
   dualFloatPumpCombined, capacitorBankCombined, trafficLightSequencer,
   slidingDoorCombined, estopMcrControl, compressorControl, photoSorterControl,
+  hvacFanControl, sumpPumpControl, airlockInterlockControl, atsControl,
 ];
 
 /* =========================================================
@@ -2707,4 +2969,15 @@ const QUIZ = [
   { q: "¿En qué se diferencia un sensor fotoeléctrico de tipo 'barrera' (through-beam) de uno inductivo?", a: ["Detecta la interrupción de un haz de luz, no solo piezas metálicas", "El fotoeléctrico solamente puede detectar piezas metálicas grandes", "El inductivo siempre necesita dos cables adicionales de repuesto", "No hay ninguna diferencia real de funcionamiento entre ambos"], correct: 0 },
   { q: "En un clasificador con sensor fotoeléctrico y electroválvula, ¿qué función cumple el selector SEL en 'modo 0'?", a: ["Acelera el paso de piezas frente al sensor fotoeléctrico", "Corta la alimentación de todo el circuito de clasificación", "Invierte la lógica de la electroválvula de empuje", "Enciende una alarma sonora adicional en el tablero"], correct: 1 },
   { q: "¿Qué representa la clema (bloque de conexiones) en un diagrama de control?", a: ["Un punto de unión entre dos cables, sin conmutar nada", "Un tipo especial de contactor auxiliar de mando", "Un relé de tiempo con retardo ajustable", "Un fusible de protección contra sobrecorrientes"], correct: 0 },
+
+  // ---- HVAC, bombeo, esclusas y transferencia automatica (ATS) ----
+  { q: "¿Qué diferencia hay entre un termostato de alto límite (TH1, NC) y un relé térmico de sobrecarga en un circuito de ventilador?", a: ["Ninguna diferencia real, ambos hacen exactamente lo mismo", "El de alto límite corta por temperatura del ducto, el térmico por corriente del motor", "El térmico nunca puede colocarse en serie con el circuito de control", "El termostato de alto límite solo sirve para encender lámparas piloto"], correct: 1 },
+  { q: "Tras un corte por termostato de alto límite (TH1), ¿qué debe pasar cuando el ducto se enfría y TH1 vuelve a cerrar?", a: ["El ventilador arranca solo de inmediato, sin intervención", "El ventilador permanece detenido hasta presionar marcha otra vez", "El termostato queda bloqueado permanentemente hasta cambiarlo", "Se invierte el sentido de giro del ventilador automáticamente"], correct: 1 },
+  { q: "En un control de bomba de achique con dos flotadores (FS1 y FS2), ¿qué función cumple el segundo flotador (más alto)?", a: ["Arranca la bomba en lugar del primer flotador", "Dispara una alarma de alto nivel si la bomba no logra bajar el agua", "Invierte el sentido de giro de la bomba", "Sustituye por completo al relé térmico de protección"], correct: 1 },
+  { q: "¿Por qué el flotador FS1 en un control de bomba de achique acciona la bobina directamente, sin botón ni contacto de sello?", a: ["Porque el propio flotador actúa como interruptor automático según el nivel", "Porque las bombas de achique nunca necesitan protección térmica", "Porque el sello eléctrico dañaría el mecanismo del flotador", "Porque así lo exige siempre el fabricante, sin razón técnica"], correct: 0 },
+  { q: "En una esclusa de acceso con dos puertas enclavadas, ¿qué impide que la puerta B se abra mientras la A está abierta?", a: ["Un temporizador que retrasa unos segundos la apertura de B", "El interruptor de límite LSA (de la puerta A) debe estar cerrado para dar permiso a B", "Un relé térmico compartido entre ambas puertas", "Nada lo impide: ambas puertas pueden abrir libremente y a la vez"], correct: 1 },
+  { q: "¿Qué principio de control comparten una esclusa de dos puertas y un arrancador reversible (adelante/reversa)?", a: ["Ambos usan exactamente el mismo tipo de motor trifásico", "Ambos dependen del enclavamiento: dos salidas que nunca deben activarse a la vez", "Ambos requieren obligatoriamente un transformador de control", "No comparten ningún principio de control en común"], correct: 1 },
+  { q: "En una transferencia automática (ATS), ¿por qué KN (red normal) y KE (generador) deben estar enclavados entre sí?", a: ["Para ahorrar cableado dentro del gabinete del tablero", "Para impedir que ambas fuentes alimenten la carga al mismo tiempo", "Porque así lo exige únicamente el color de los botones de mando", "Para que el generador arranque más rápido en cada falla"], correct: 1 },
+  { q: "¿Para qué sirve el temporizador KT en un circuito de transferencia automática (ATS)?", a: ["Para retardar el cierre de KE mientras arranca y estabiliza el generador", "Para medir la corriente que consume la carga conectada", "Para invertir el sentido de giro del generador", "Para encender la lámpara piloto de la red normal"], correct: 0 },
+  { q: "Al restablecerse la red eléctrica normal en una ATS ya transferida al generador, ¿qué debe ocurrir?", a: ["El generador se queda encendido permanentemente junto con la red", "KE se desenergiza y KN vuelve a alimentar la carga, sin que ambas coincidan", "Se disparan las dos fuentes a la vez por seguridad", "No pasa nada hasta apagar manualmente el generador"], correct: 1 },
 ];

@@ -56,6 +56,8 @@ const GROUP_LABELS = {
   seguridad: "Seguridad y Relé Maestro (MCR)",
   neumatica: "Sistemas Neumáticos",
   sensores: "Sensores y Clasificación",
+  hvac: "HVAC y Ventilación",
+  respaldo: "Energía de Respaldo (ATS)",
 };
 
 const LEVEL_LABELS = {
