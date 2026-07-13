@@ -27,6 +27,11 @@ const GROUP_LABELS = {
   "arranque-suave": "Arrancador Suave (Soft Starter)",
   secuencial: "Arranque Secuencial de Motores",
   avanzado: "Retos Combinados",
+  residencial: "Instalación Residencial",
+  bombeo: "Sistemas de Bombeo",
+  eficiencia: "Eficiencia Energética",
+  automatizacion: "Automatización y Secuencias",
+  seguridad: "Seguridad y Relé Maestro (MCR)",
 };
 
 const LEVEL_LABELS = {
@@ -59,6 +64,8 @@ function goMenu() {
       else if (nav === "planos") goPlanos();
       else if (nav === "quiz") goQuiz();
       else if (nav === "free") goFree();
+      else if (nav === "diagnostico") goDiagnostico();
+      else if (nav === "referencia") goReferencia();
     });
   });
 }
@@ -237,7 +244,7 @@ function goChallenges() {
     for (const ex of list) {
       const card = document.createElement("button");
       card.className = "challenge-card";
-      const kindLabel = ex.combined ? "Control + Fuerza" : (ex.kind === "control" ? "Control" : "Fuerza");
+      const kindLabel = ex.combined ? "Control + Fuerza" : (ex.kind === "control" ? "Control" : ex.kind === "fuerza" ? "Fuerza" : "Circuito");
       card.innerHTML = `<span class="challenge-kind">${kindLabel}</span>
         <span class="challenge-topic">${GROUP_LABELS[ex.group] || ex.group}</span>
         <span class="challenge-name">${ex.title}</span>`;
@@ -247,6 +254,30 @@ function goChallenges() {
     box.appendChild(row);
     container.appendChild(box);
   }
+}
+
+/* ---------------- Modo Diagnostico ---------------- */
+
+function goDiagnostico() {
+  crumb.textContent = "Modo Diagnóstico";
+  useTemplate("tpl-diagnostics");
+  const row = document.getElementById("diagnostics-list");
+  for (const diag of DIAGNOSTICS) {
+    const card = document.createElement("button");
+    card.className = "challenge-card";
+    card.innerHTML = `<span class="challenge-kind" style="background:rgba(255,107,107,0.15);color:#ff6b6b;">Falla reportada</span>
+      <span class="challenge-topic">${diag.exercise.title}</span>
+      <span class="challenge-name">${diag.title}</span>`;
+    card.addEventListener("click", () => goWiring(diag.exercise.id, diag));
+    row.appendChild(card);
+  }
+}
+
+/* ---------------- Manual de Referencia ---------------- */
+
+function goReferencia() {
+  crumb.textContent = "Manual de Referencia";
+  useTemplate("tpl-referencia");
 }
 
 /* ---------------- Panel de operacion 3D ---------------- */
@@ -387,12 +418,15 @@ function friendlyTerminal(id, exercise) {
   return term ? `${label} (terminal ${term})` : label;
 }
 
-function goWiring(exId) {
-  const exercise = EXERCISES.find((e) => e.id === exId);
-  crumb.textContent = exercise.title;
+// `diag`, when provided, turns this into a Diagnostic Mode screen: the
+// canvas starts pre-wired (correctly, except for one deliberate fault)
+// instead of blank, and the brief is replaced with the reported symptom.
+function goWiring(exId, diag) {
+  const exercise = diag ? diag.exercise : EXERCISES.find((e) => e.id === exId);
+  crumb.textContent = diag ? "Diagnóstico: " + diag.title : exercise.title;
   useTemplate("tpl-wiring");
-  document.getElementById("wiring-title").textContent = exercise.title;
-  document.getElementById("wiring-brief").textContent = exercise.brief;
+  document.getElementById("wiring-title").textContent = diag ? "🔧 " + diag.title : exercise.title;
+  document.getElementById("wiring-brief").textContent = diag ? diag.symptom : exercise.brief;
   const svg = document.getElementById("wiring-svg");
   const statusEl = document.getElementById("wiring-status");
   const logEl = document.getElementById("wiring-log");
@@ -413,6 +447,11 @@ function goWiring(exId) {
     },
     onSolve: () => refreshPanel3D(),
   });
+
+  if (diag) {
+    diagram.presetWires(diag.faultWires);
+    statusEl.textContent = `Circuito pre-cableado con ${diagram.wireCount()} cables — uno de ellos está mal. Presiona los botones (arriba, en el plano, o en el panel 3D) para observar la falla en vivo, luego usa "Verificar" para localizarla.`;
+  }
 
   if (exercise.source) {
     panelSection.classList.remove("hidden");
@@ -670,6 +709,19 @@ function goQuiz() {
   const pool = [...QUIZ].sort(() => Math.random() - 0.5).slice(0, 10);
   let idx = 0, correct = 0;
 
+  // shuffle the answer order every time a question is shown, so the
+  // correct answer's position (and its length relative to the others)
+  // stops being a usable pattern — otherwise the same fixed order lets
+  // you learn "option B" or "the longest one" instead of the material
+  function shuffledOptions(item) {
+    const order = item.a.map((_, i) => i);
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+    return { options: order.map((i) => item.a[i]), correctIdx: order.indexOf(item.correct) };
+  }
+
   function renderQ() {
     if (idx >= pool.length) {
       body.innerHTML = `<div class="quiz-result">
@@ -681,20 +733,21 @@ function goQuiz() {
       return;
     }
     const item = pool[idx];
+    const { options, correctIdx } = shuffledOptions(item);
     body.innerHTML = `
       <div class="quiz-progress">Pregunta ${idx + 1} de ${pool.length}</div>
       <div class="quiz-question">${item.q}</div>
       <div class="quiz-options" id="quiz-options"></div>
     `;
     const opts = document.getElementById("quiz-options");
-    item.a.forEach((opt, i) => {
+    options.forEach((opt, i) => {
       const b = document.createElement("button");
       b.className = "quiz-option";
       b.textContent = opt;
       b.addEventListener("click", () => {
-        const isCorrect = i === item.correct;
+        const isCorrect = i === correctIdx;
         opts.querySelectorAll(".quiz-option").forEach((el, oi) => {
-          el.classList.add(oi === item.correct ? "opt-correct" : (oi === i ? "opt-wrong" : "opt-disabled"));
+          el.classList.add(oi === correctIdx ? "opt-correct" : (oi === i ? "opt-wrong" : "opt-disabled"));
           el.disabled = true;
         });
         if (isCorrect) { correct++; addScore(20); } else { addScore(-5); }
@@ -719,6 +772,26 @@ const FREE_PALETTE = [
   { key: "horn", label: "Bocina", make: (n) => ({ prefix: "H", tpl: () => TPL.horn("H" + n) }) },
   { key: "ls", label: "Interruptor de límite", make: (n) => ({ prefix: "LS", tpl: () => TPL.limitSwitch("NO", "3-4", "3", "4"), manual: true }) },
   { key: "brk", label: "Guardamotor (interruptor)", make: (n) => ({ prefix: "Q", tpl: () => TPL.breaker("Q" + n, "1", "2"), toggle: true }) },
+  { key: "seta", label: "Paro de emergencia (SETA)", make: (n) => ({ prefix: "E", tpl: () => TPL.emergencyStop("E" + n, "1", "2"), manual: true }) },
+  { key: "mcb", label: "Disyuntor (MCB)", make: (n) => ({ prefix: "Q", tpl: () => TPL.mcb("Q" + n, "1", "2"), toggle: true }) },
+  { key: "clema", label: "Clema (bloque de conexiones)", make: (n) => ({ prefix: "X", tpl: () => TPL.terminalBlock("X" + n, "1", "2") }) },
+  { key: "sensorInd", label: "Sensor inductivo", make: (n) => ({ prefix: "LS", tpl: () => TPL.inductiveSensor("NO", "1-2", "1", "2"), manual: true }) },
+  { key: "sensorFoto", label: "Sensor fotoeléctrico", make: (n) => ({ prefix: "PE", tpl: () => TPL.photoSensor("NO", "1-2", "1", "2"), manual: true }) },
+  { key: "floatSw", label: "Interruptor de flotador", make: (n) => ({ prefix: "FS", tpl: () => TPL.floatSwitch("NO", "3-4", "3", "4"), manual: true }) },
+  { key: "photocell", label: "Fotocelda crepuscular", make: (n) => ({ prefix: "PC", tpl: () => TPL.photocell("NO", "1-2", "1", "2"), manual: true }) },
+  { key: "actuator", label: "Actuador / electroválvula", make: (n) => ({ prefix: "YV", tpl: () => TPL.actuator("YV" + n) }) },
+  { key: "tc", label: "Transformador de control (TC)", make: (n) => ({ prefix: "TC", tpl: () => TPL.controlTransformer("TC" + n, "in", "out") }) },
+  { key: "capbank", label: "Banco de capacitores", make: (n) => ({ prefix: "CB", tpl: () => TPL.capacitorBank("CB" + n) }) },
+  { key: "selector", label: "Selector de 2 posiciones", make: (n) => ({ prefix: "SEL", tpl: () => TPL.selector("0-1", "0", "1"), toggle: true }) },
+  { key: "fuse", label: "Fusible", make: (n) => ({ prefix: "F", tpl: () => TPL.fuse("F" + n, "1", "2"), toggle: true }) },
+  { key: "pole", label: "Polo de potencia (contactor/guardamotor)", make: (n) => ({ prefix: "L", tpl: () => TPL.pole("1-2", "1", "2") }) },
+  { key: "motor3", label: "Motor trifásico (3 puntas)", make: (n) => ({ prefix: "M", tpl: () => TPL.motor(true) }) },
+  { key: "motor6", label: "Motor trifásico (6 puntas)", make: (n) => ({ prefix: "M", tpl: () => TPL.motor(false) }) },
+  { key: "motor1ph", label: "Motor monofásico", make: (n) => ({ prefix: "M", tpl: () => TPL.singlePhaseMotor() }) },
+  { key: "motorDC", label: "Motor de CD", make: (n) => ({ prefix: "M", tpl: () => TPL.motorDC() }) },
+  { key: "vfd", label: "Variador de frecuencia (VFD)", make: (n) => ({ prefix: "VFD", tpl: () => TPL.vfd() }) },
+  { key: "softstarter", label: "Arrancador suave", make: (n) => ({ prefix: "SS", tpl: () => TPL.softstarter() }) },
+  { key: "chopper", label: "Chopper (DC-DC)", make: (n) => ({ prefix: "CH", tpl: () => TPL.chopper() }) },
 ];
 
 function goFree() {
@@ -734,6 +807,7 @@ function goFree() {
   function freshExercise() {
     return {
       id: "free",
+      title: "Modo Libre",
       vb: [900, 600],
       source: ["freeL"],
       return: ["freeN"],
@@ -745,11 +819,27 @@ function goFree() {
     };
   }
 
+  const panelSection = document.getElementById("panel3d-section");
+  let panel3d = null;
+
+  function refreshFreePanel3D() {
+    const hasPanel = diagram.exercise.components.some((c) => c.manual || c.toggle || (c.tpl && c.tpl.isLamp));
+    if (!hasPanel) {
+      panelSection.classList.add("hidden");
+      panel3d = null;
+      return;
+    }
+    panelSection.classList.remove("hidden");
+    panel3d = buildPanel3D(document.getElementById("panel3d-box"), diagram.exercise, diagram);
+  }
+
   let diagram = new Diagram(svg, freshExercise(), {
     selectable: true,
     onChange: () => { statusEl.textContent = `Cables colocados: ${diagram.wireCount()}`; },
     onSelect: (id) => renderInspector(id),
+    onSolve: () => { if (panel3d) panel3d.refresh(); },
   });
+  refreshFreePanel3D();
 
   paletteEl.innerHTML = "";
   for (const item of FREE_PALETTE) {
@@ -777,6 +867,7 @@ function goFree() {
     if (spec.manual) comp.manual = true;
     if (spec.toggle) comp.toggle = true;
     diagram.addComponent(comp);
+    refreshFreePanel3D();
     statusEl.textContent = `${id} colocado. Sigue colocando piezas o conecta terminales.`;
   });
 
@@ -817,16 +908,18 @@ function goFree() {
   });
   document.getElementById("free-delete").addEventListener("click", () => {
     if (!diagram.removeSelected()) statusEl.textContent = "Selecciona primero una pieza haciendo clic sobre ella.";
-    else { inspectorEl.innerHTML = ""; statusEl.textContent = "Pieza eliminada."; }
+    else { inspectorEl.innerHTML = ""; statusEl.textContent = "Pieza eliminada."; refreshFreePanel3D(); }
   });
   document.getElementById("free-clear").addEventListener("click", () => {
     diagram = new Diagram(svg, freshExercise(), {
       selectable: true,
       onChange: () => { statusEl.textContent = `Cables colocados: ${diagram.wireCount()}`; },
       onSelect: (id) => renderInspector(id),
+      onSolve: () => { if (panel3d) panel3d.refresh(); },
     });
     inspectorEl.innerHTML = "";
     statusEl.textContent = "Lienzo reiniciado — solo quedan los rieles L y N.";
+    refreshFreePanel3D();
   });
 }
 

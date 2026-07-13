@@ -257,6 +257,7 @@ TPL.button = (kind, ref, t1, t2) => ({
     g.appendChild(svgEl("ellipse", { cx: 1.5, cy: 2, rx: 12.5, ry: 11, class: "mount-base" }));
     g.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 12.5, class: "bezel-ring", filter: "url(#fDrop)" }));
     g.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 9, class: (kind === "NO" ? "btn-dome dome-green" : "btn-dome dome-red") + " btn-pressable" }));
+    g.appendChild(svgEl("ellipse", { cx: -3, cy: -3.5, rx: 3, ry: 1.8, class: "dome-highlight" }));
     g.appendChild(text(18, 3, ref, "sym-ref", "start"));
   },
 });
@@ -273,6 +274,7 @@ TPL.lamp = (label, color) => ({
     g.appendChild(svgEl("ellipse", { cx: 1.5, cy: 2, rx: 12.5, ry: 11, class: "mount-base" }));
     g.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 12.5, class: "bezel-ring", filter: "url(#fDrop)" }));
     g.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 9.5, class: "lamp-glass lamp-" + color }));
+    g.appendChild(svgEl("ellipse", { cx: -3, cy: -3.5, rx: 3, ry: 1.8, class: "dome-highlight" }));
     g.appendChild(text(0, 4, label, "lamp-caption"));
     screwAt(g, 0, -20, 5.5);
     screwAt(g, 0, 20, 5.5);
@@ -379,12 +381,24 @@ TPL.motor = (leadsOnly3) => {
     w: 100, h: leadsOnly3 ? 78 : 100,
     terminals: terms,
     draw(g) {
+      g.appendChild(svgEl("rect", { x: -20, y: 24, width: 40, height: 8, rx: 2, class: "motor-base", filter: "url(#fDrop)" }));
+      g.appendChild(svgEl("circle", { cx: -15, cy: 28, r: 2, class: "motor-bolt" }));
+      g.appendChild(svgEl("circle", { cx: 15, cy: 28, r: 2, class: "motor-bolt" }));
       g.appendChild(svgEl("circle", { cx: 0, cy: -10, r: 34, class: "motor-shell", filter: "url(#fDrop)" }));
+      for (let i = 0; i < 16; i++) {
+        const a = (i / 16) * Math.PI * 2;
+        g.appendChild(svgEl("line", {
+          x1: Math.cos(a) * 25, y1: -10 + Math.sin(a) * 25,
+          x2: Math.cos(a) * 33, y2: -10 + Math.sin(a) * 33,
+          class: "motor-fin",
+        }));
+      }
       for (let i = 0; i < 10; i++) {
         const a = (i / 10) * Math.PI * 2;
         g.appendChild(svgEl("circle", { cx: Math.cos(a) * 29, cy: -10 + Math.sin(a) * 29, r: 2.1, class: "motor-bolt" }));
       }
       g.appendChild(svgEl("circle", { cx: 0, cy: -10, r: 22, class: "motor-face" }));
+      g.appendChild(svgEl("ellipse", { cx: -8, cy: -20, rx: 9, ry: 5, class: "motor-highlight" }));
       g.appendChild(text(0, -6, "M", "sym-motor"));
       g.appendChild(text(0, 10, "3~", "sym-label-small"));
       const fanWrap = svgEl("g", { class: "motor-fan-wrap", transform: "translate(0,-10)" });
@@ -685,6 +699,118 @@ TPL.singlePhaseMotor = (secondLabel) => ({
   },
 });
 
+TPL.fuse = (ref, tin, tout) => ({
+  // fusible: protege el circuito fundiendose. Aqui se modela como un gate
+  // toggle-able para poder simular, en modo diagnostico, un fusible "fundido"
+  // (abierto) que el usuario debe encontrar y sustituir.
+  w: 24, h: 46,
+  gate: true,
+  restClosed: true,
+  terminals: { [tin]: { x: 0, y: -23 }, [tout]: { x: 0, y: 23 } },
+  draw(g) {
+    g.appendChild(svgEl("line", { x1: 0, y1: -23, x2: 0, y2: -15, class: "cable-core" }));
+    g.appendChild(svgEl("line", { x1: 0, y1: 15, x2: 0, y2: 23, class: "cable-core" }));
+    g.appendChild(svgEl("rect", { x: -6, y: -15, width: 12, height: 30, rx: 6, class: "fuse-tube" }));
+    g.appendChild(svgEl("line", { x1: 0, y1: -12, x2: 0, y2: 12, class: "fuse-wire" }));
+    screwAt(g, 0, -23, 4.6);
+    screwAt(g, 0, 23, 4.6);
+    g.appendChild(text(13, 3, ref, "sym-ref", "start"));
+  },
+});
+
+// contacto de un conmutador de 3 vias (SPDT de escalera). Cada conmutador
+// real se representa con DOS de estos contactos (posicion A / posicion B)
+// enlazados mediante `pairedWith`, para que siempre esten en posiciones
+// opuestas — tal como el unico brazo mecanico de la palanca real.
+TPL.wayContact = (posLabel, ref, t1, t2) => ({
+  w: 30, h: 46,
+  gate: true,
+  restClosed: posLabel === "A",
+  terminals: { [t1]: { x: 0, y: -23 }, [t2]: { x: 0, y: 23 } },
+  draw(g) {
+    contactGap(g, posLabel === "A" ? "NC" : "NO", -23, 23);
+    g.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 11, class: "sel-body" }));
+    g.appendChild(svgEl("line", { x1: 0, y1: 0, x2: 0, y2: -9, class: "sel-pointer" }));
+    g.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 2.4, class: "sel-hub" }));
+    g.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 16, class: "sel-hit btn-pressable" }));
+    g.appendChild(text(0, 20, posLabel, "sym-label-small"));
+    g.appendChild(text(18, 3, ref, "sym-ref", "start"));
+  },
+});
+
+TPL.floatSwitch = (kind, ref, t1, t2) => ({
+  // interruptor de flotador (nivel de liquido): opera manualmente para
+  // simular que el nivel del tanque sube o baja
+  w: 34, h: 48,
+  gate: true,
+  btnKind: kind,
+  terminals: { [t1]: { x: 0, y: -24 }, [t2]: { x: 0, y: 24 } },
+  restClosed: kind === "NC",
+  draw(g) {
+    contactGap(g, kind, -24, 24);
+    g.appendChild(svgEl("line", { x1: 0, y1: -16, x2: 8, y2: 6, class: "float-rod" }));
+    g.appendChild(svgEl("circle", { cx: 10, cy: 10, r: 7, class: "float-ball btn-pressable" }));
+    g.appendChild(text(20, -14, ref, "sym-ref", "start"));
+  },
+});
+
+TPL.controlTransformer = (ref, tin, tout) => ({
+  // transformador de control (TC): reduce la tension de linea a una
+  // tension segura de mando. Aqui se modela como paso directo siempre
+  // cerrado (no conmuta), solo con una apariencia distinta.
+  w: 40, h: 50,
+  gate: true,
+  restClosed: true,
+  terminals: { [tin]: { x: 0, y: -25 }, [tout]: { x: 0, y: 25 } },
+  draw(g) {
+    g.appendChild(svgEl("line", { x1: 0, y1: -25, x2: 0, y2: -16, class: "cable-core" }));
+    g.appendChild(svgEl("line", { x1: 0, y1: 16, x2: 0, y2: 25, class: "cable-core" }));
+    g.appendChild(svgEl("rect", { x: -16, y: -16, width: 32, height: 32, rx: 4, class: "tc-body", filter: "url(#fDrop)" }));
+    g.appendChild(svgEl("circle", { cx: -6, cy: 0, r: 9, class: "tc-coilA" }));
+    g.appendChild(svgEl("circle", { cx: 6, cy: 0, r: 9, class: "tc-coilB" }));
+    screwAt(g, 0, -25, 4.8);
+    screwAt(g, 0, 25, 4.8);
+    g.appendChild(text(22, 4, ref, "sym-ref", "start"));
+  },
+});
+
+TPL.capacitorBank = (label) => ({
+  // banco de capacitores para correccion del factor de potencia: una
+  // carga trifasica/monofasica que se conecta/desconecta con un contactor
+  w: 40, h: 50,
+  isLamp: true,
+  lampColor: "green",
+  lampLabel: label,
+  terminals: { X1: { x: 0, y: -25 }, X2: { x: 0, y: 25 } },
+  draw(g) {
+    g.appendChild(svgEl("line", { x1: 0, y1: -25, x2: 0, y2: -10, class: "cable-core" }));
+    g.appendChild(svgEl("line", { x1: 0, y1: 10, x2: 0, y2: 25, class: "cable-core" }));
+    g.appendChild(svgEl("rect", { x: -14, y: -10, width: 28, height: 20, rx: 2, class: "capbank-body" }));
+    g.appendChild(svgEl("line", { x1: -8, y1: -10, x2: -8, y2: 10, class: "capbank-plate" }));
+    g.appendChild(svgEl("line", { x1: 0, y1: -10, x2: 0, y2: 10, class: "capbank-plate" }));
+    g.appendChild(svgEl("line", { x1: 8, y1: -10, x2: 8, y2: 10, class: "capbank-plate" }));
+    g.appendChild(text(0, 24, label, "nameplate-sub"));
+    screwAt(g, 0, -25, 5);
+    screwAt(g, 0, 25, 5);
+  },
+});
+
+TPL.photocell = (kind, ref, t1, t2) => ({
+  // fotocelda crepuscular: cierra el circuito de alumbrado al anochecer.
+  // Se opera manualmente para simular dia/noche.
+  w: 34, h: 46,
+  gate: true,
+  btnKind: kind,
+  terminals: { [t1]: { x: 0, y: -23 }, [t2]: { x: 0, y: 23 } },
+  restClosed: kind === "NC",
+  draw(g) {
+    contactGap(g, kind, -23, 23);
+    g.appendChild(svgEl("circle", { cx: 0, cy: -2, r: 8, class: "photocell-dome btn-pressable" }));
+    g.appendChild(svgEl("circle", { cx: 0, cy: -2, r: 3.4, class: "photocell-eye" }));
+    g.appendChild(text(16, 14, ref, "sym-ref", "start"));
+  },
+});
+
 /* ---------------- Diagram ---------------- */
 
 class Diagram {
@@ -938,6 +1064,17 @@ class Diagram {
     if (!g) return;
     g.classList.toggle("closed");
     this._flash(g);
+    // some switches are modeled as two linked contacts that always sit in
+    // opposite positions (a 3-way/staircase switch's single lever, split
+    // into two 2-terminal contacts since a gate only has one in/out pair)
+    const comp = this.exercise.components.find((c) => c.id === compId);
+    if (comp && comp.pairedWith) {
+      const pg = this.compGroups.get(comp.pairedWith);
+      if (pg) {
+        pg.classList.toggle("closed", !g.classList.contains("closed"));
+        this._flash(pg);
+      }
+    }
     this.solve();
   }
 
@@ -1269,6 +1406,13 @@ class Diagram {
   }
 
   wireCount() { return this.wires.length; }
+
+  // used by Diagnostic Mode: pre-populate the canvas with a set of wires
+  // (correct or deliberately faulty) as if the user had already placed
+  // them, so a troubleshooting exercise can start mid-way instead of blank.
+  presetWires(pairs) {
+    for (const [a, b] of pairs) this._addWire(a, b);
+  }
 
   validate() {
     const nets = this.exercise.nets;

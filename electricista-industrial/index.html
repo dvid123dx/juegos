@@ -50,6 +50,16 @@
         <span class="menu-title">Modo Libre</span>
         <span class="menu-desc">Arma tu propio circuito de control desde cero, con cualquier componente, y córrelo en vivo</span>
       </button>
+      <button class="menu-card" data-nav="diagnostico">
+        <span class="menu-icon">⚠</span>
+        <span class="menu-title">Modo Diagnóstico</span>
+        <span class="menu-desc">Circuitos pre-cableados con una falla real reportada — encuéntrala y corrígela, como en un tablero de verdad</span>
+      </button>
+      <button class="menu-card" data-nav="referencia">
+        <span class="menu-icon">📖</span>
+        <span class="menu-title">Manual de Referencia</span>
+        <span class="menu-desc">Colores de cables, numeración normalizada de terminales, fórmulas y tabla de símbolos</span>
+      </button>
     </div>
   </section>
 </template>
@@ -67,6 +77,14 @@
         <div class="explorer-info" id="explorer-info"></div>
       </div>
     </div>
+  </section>
+</template>
+
+<template id="tpl-diagnostics">
+  <section class="screen challenges-screen">
+    <h2 class="screen-title">Modo Diagnóstico</h2>
+    <p class="screen-sub">El circuito ya está cableado, pero alguien reportó una falla. Léela, opera el circuito para observarla en vivo, y localiza el cable responsable con "Verificar".</p>
+    <div class="challenge-row" id="diagnostics-list"></div>
   </section>
 </template>
 
@@ -195,7 +213,132 @@
           <button id="free-delete" class="btn btn-danger">✕ Eliminar seleccionado</button>
           <button id="free-clear" class="btn btn-danger">Borrar todo</button>
         </div>
+        <div id="panel3d-section" class="panel3d-section hidden">
+          <h3 class="panel3d-title">Panel de Operación 3D <span>— arrastra para rotarlo</span></h3>
+          <div class="panel3d-stage" id="panel3d-stage">
+            <div class="panel3d-box" id="panel3d-box"></div>
+          </div>
+        </div>
       </div>
+    </div>
+  </section>
+</template>
+
+<template id="tpl-referencia">
+  <section class="screen referencia-screen">
+    <h2 class="screen-title">Manual de Referencia</h2>
+    <p class="screen-sub">Consulta rápida de convenciones, numeración normalizada y fórmulas — el mismo lenguaje que verás en un tablero real.</p>
+    <div class="ref-grid">
+
+      <div class="ref-card">
+        <h3>Colores de conductores (referencia NOM-001-SEDE)</h3>
+        <table class="ref-table">
+          <tr><th>Color</th><th>Uso</th></tr>
+          <tr><td><span class="swatch" style="background:#111"></span> Negro</td><td>Fase (línea) en circuitos monofásicos y trifásicos</td></tr>
+          <tr><td><span class="swatch" style="background:#c22b2b"></span> Rojo</td><td>Fase secundaria / circuitos de control</td></tr>
+          <tr><td><span class="swatch" style="background:#2a5ad1"></span> Azul</td><td>Fase terciaria (en instalaciones trifásicas de 3 colores)</td></tr>
+          <tr><td><span class="swatch" style="background:#e8e8e8;border:1px solid #888"></span> Blanco / Gris</td><td>Neutro</td></tr>
+          <tr><td><span class="swatch" style="background:#2fae57"></span> Verde (o verde/amarillo)</td><td>Tierra física (protección)</td></tr>
+          <tr><td><span class="swatch" style="background:#ff8a3d"></span> Naranja</td><td>Partes energizadas de un circuito interconectado con doble alimentación (ej. transferencia)</td></tr>
+        </table>
+        <p class="ref-note">La convención exacta varía por país/norma (NOM en México, NEC/NFPA 70 en EUA, IEC en Europa) — siempre confirma contra el plano y la norma local antes de trabajar.</p>
+      </div>
+
+      <div class="ref-card">
+        <h3>Numeración normalizada de terminales (IEC)</h3>
+        <table class="ref-table">
+          <tr><th>Terminales</th><th>Función</th></tr>
+          <tr><td>A1 - A2</td><td>Bobina de contactor, relé o temporizador</td></tr>
+          <tr><td>1-2, 3-4, 5-6</td><td>Contactos principales de potencia (siempre número impar arriba)</td></tr>
+          <tr><td>13-14, 23-24, 33-34...</td><td>Contactos auxiliares normalmente abiertos (NA)</td></tr>
+          <tr><td>21-22, 31-32, 41-42...</td><td>Contactos auxiliares normalmente cerrados (NC)</td></tr>
+          <tr><td>95-96</td><td>Contacto NC del relé térmico (protección)</td></tr>
+          <tr><td>97-98</td><td>Contacto NA del relé térmico (señalización de disparo)</td></tr>
+          <tr><td>15-16 / 15-18</td><td>Temporizador: contacto NC / NA con retardo (a la energización)</td></tr>
+          <tr><td>25-26 / 25-28</td><td>Segundo juego de contactos retardados del mismo temporizador</td></tr>
+          <tr><td>1L1-2T1, 3L2-4T2, 5L3-6T3</td><td>Guardamotor / interruptor termomagnético (entrada L, salida T)</td></tr>
+        </table>
+      </div>
+
+      <div class="ref-card">
+        <h3>Designadores de referencia comunes</h3>
+        <table class="ref-table">
+          <tr><th>Letra</th><th>Dispositivo</th></tr>
+          <tr><td>K / KM</td><td>Contactor o relé (KM para contactor de motor específicamente)</td></tr>
+          <tr><td>KT</td><td>Relé de tiempo (temporizador)</td></tr>
+          <tr><td>CR</td><td>Relé de control auxiliar</td></tr>
+          <tr><td>F</td><td>Fusible o dispositivo de protección (F1 fusible, F2 térmico típico)</td></tr>
+          <tr><td>Q</td><td>Interruptor automático / guardamotor / seccionador</td></tr>
+          <tr><td>S</td><td>Interruptor de mando manual (S0 paro, S1 marcha por convención)</td></tr>
+          <tr><td>SB</td><td>Botón pulsador (variante IEC de "S")</td></tr>
+          <tr><td>H</td><td>Lámpara piloto o indicador (H1, H2...)</td></tr>
+          <tr><td>M</td><td>Motor</td></tr>
+          <tr><td>T / TC</td><td>Transformador (TC = transformador de control)</td></tr>
+          <tr><td>LS</td><td>Interruptor de límite (fin de carrera)</td></tr>
+          <tr><td>FS</td><td>Interruptor de flotador (nivel de líquido)</td></tr>
+          <tr><td>PC / PE</td><td>Fotocelda / sensor fotoeléctrico</td></tr>
+          <tr><td>YV</td><td>Electroválvula / actuador solenoide</td></tr>
+        </table>
+      </div>
+
+      <div class="ref-card">
+        <h3>Abreviaturas frecuentes</h3>
+        <table class="ref-table">
+          <tr><th>Sigla</th><th>Significado</th></tr>
+          <tr><td>NA / NO</td><td>Normalmente Abierto / Normally Open</td></tr>
+          <tr><td>NC / NF</td><td>Normalmente Cerrado / Normally Closed (Fermé)</td></tr>
+          <tr><td>DOL</td><td>Direct On Line — arranque directo a tensión plena</td></tr>
+          <tr><td>VFD / VDF</td><td>Variable Frequency Drive — variador de frecuencia</td></tr>
+          <tr><td>MCB</td><td>Miniature Circuit Breaker — minidisyuntor termomagnético</td></tr>
+          <tr><td>MCC</td><td>Motor Control Center — centro de control de motores</td></tr>
+          <tr><td>PLC</td><td>Programmable Logic Controller — controlador lógico programable</td></tr>
+          <tr><td>FLA / FLC</td><td>Full Load Amps/Current — corriente a plena carga</td></tr>
+          <tr><td>LRA</td><td>Locked Rotor Amps — corriente de rotor bloqueado (arranque)</td></tr>
+          <tr><td>FP</td><td>Factor de Potencia</td></tr>
+          <tr><td>ATS</td><td>Automatic Transfer Switch — transferencia automática</td></tr>
+          <tr><td>GFCI / RCD</td><td>Interruptor diferencial (falla a tierra)</td></tr>
+        </table>
+      </div>
+
+      <div class="ref-card">
+        <h3>Fórmulas básicas de motores</h3>
+        <table class="ref-table">
+          <tr><th>Cálculo</th><th>Fórmula</th></tr>
+          <tr><td>Corriente monofásica</td><td>I = P / (V × FP)</td></tr>
+          <tr><td>Corriente trifásica</td><td>I = P / (V × √3 × FP)</td></tr>
+          <tr><td>Potencia trifásica</td><td>P = √3 × V × I × FP</td></tr>
+          <tr><td>Velocidad síncrona (RPM)</td><td>Ns = 120 × f / polos</td></tr>
+          <tr><td>Deslizamiento</td><td>s = (Ns − Nr) / Ns</td></tr>
+          <tr><td>Corriente de arranque estimada</td><td>6 a 8 veces la corriente nominal (arranque directo)</td></tr>
+          <tr><td>Reducción con estrella-triángulo</td><td>≈ 33% de la corriente y el par de arranque directo</td></tr>
+        </table>
+        <p class="ref-note">FP = factor de potencia, f = frecuencia de línea (Hz), Ns = velocidad síncrona, Nr = velocidad real del rotor.</p>
+      </div>
+
+      <div class="ref-card">
+        <h3>Niveles de tensión comunes (México)</h3>
+        <table class="ref-table">
+          <tr><th>Tensión</th><th>Uso típico</th></tr>
+          <tr><td>127V monofásico (L-N)</td><td>Contactos residenciales, alumbrado, control de baja potencia</td></tr>
+          <tr><td>220V monofásico / bifásico</td><td>Electrodomésticos de mayor potencia, aires acondicionados residenciales</td></tr>
+          <tr><td>220V trifásico</td><td>Motores pequeños y medianos en instalaciones comerciales</td></tr>
+          <tr><td>440V trifásico</td><td>Motores industriales de mayor potencia</td></tr>
+          <tr><td>24V / 110V de control</td><td>Circuitos de mando reducidos mediante transformador de control (TC), por seguridad</td></tr>
+        </table>
+      </div>
+
+      <div class="ref-card">
+        <h3>Buenas prácticas de diagnóstico</h3>
+        <ul class="ref-list">
+          <li>Antes de medir o tocar cualquier terminal, confirma que el circuito esté desenergizado y bloqueado (LOTO — Lockout/Tagout).</li>
+          <li>Compara siempre el comportamiento observado contra el diagrama de referencia — la mayoría de las fallas son un solo cable en la posición equivocada.</li>
+          <li>Un motor que arranca pero no se sella casi siempre apunta al contacto auxiliar de sello (13-14) mal conectado o ausente.</li>
+          <li>Dos contactores que deberían ser mutuamente excluyentes energizándose juntos es una falla grave de enclavamiento — puede provocar cortocircuito entre fases.</li>
+          <li>Si el arrancador a tensión reducida pasa directo a tensión plena sin la etapa reducida, sospecha de los contactos del temporizador (instantáneo vs. retardado) cruzados.</li>
+          <li>Verifica siempre con el diagrama de control Y el de fuerza — muchas fallas "eléctricas" son mecánicas (fin de carrera desajustado, flotador atorado, etc.).</li>
+        </ul>
+      </div>
+
     </div>
   </section>
 </template>

@@ -311,6 +311,7 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .dome-red { fill: url(#gDomeRedOff); stroke: #4a0a08; }
 .component.closed .dome-green { fill: url(#gDomeGreenOn); filter: drop-shadow(0 0 6px #35e07a); }
 .component.closed .dome-red { fill: url(#gDomeRedOn); filter: drop-shadow(0 0 6px #ff4d4d); }
+.dome-highlight { fill: #ffffff; opacity: 0.5; pointer-events: none; }
 
 /* piloto: globo de vidrio con brillo */
 .lamp-glass { fill: url(#gLampOff); stroke: #333d54; stroke-width: 1; transition: fill 0.2s, filter 0.2s; }
@@ -329,7 +330,10 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 /* motor trifasico */
 .motor-shell { fill: url(#gMotorBody); stroke: #1a2338; stroke-width: 1.4; transition: stroke 0.2s, stroke-width 0.2s; }
 .motor-face { fill: #e7ecf7; stroke: #7f93b8; stroke-width: 1; opacity: 0.9; }
+.motor-highlight { fill: #ffffff; opacity: 0.22; pointer-events: none; }
 .motor-bolt { fill: #333d54; }
+.motor-base { fill: #1a2033; stroke: #060a14; stroke-width: 1; }
+.motor-fin { stroke: #0d1526; stroke-width: 1.6; opacity: 0.55; }
 .terminal-box { fill: url(#gClema); stroke: #6b4f10; stroke-width: 1.2; }
 .component.running .motor-shell { stroke: #43ff8f; stroke-width: 3; filter: drop-shadow(0 0 8px #35e07a); }
 
@@ -479,6 +483,33 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 /* capacitor de arranque (motor monofasico) */
 .cap-body { fill: #2a3350; stroke: #0d1526; stroke-width: 1; }
 .cap-lead { stroke: #7a5a20; stroke-width: 2; }
+
+/* fusible */
+.fuse-tube { fill: #e6c26a; stroke: #6b4f10; stroke-width: 1; }
+.fuse-wire { stroke: #4a3a10; stroke-width: 1.4; transition: stroke 0.15s, opacity 0.15s; }
+.component:not(.closed) .fuse-wire { opacity: 0.15; stroke: #ff4d4d; }
+
+/* conmutador de 3 vias (contacto pareado) */
+.sel-hit.paired-hit { fill: transparent; }
+
+/* interruptor de flotador (nivel) */
+.float-rod { stroke: #7a8bb0; stroke-width: 2; }
+.float-ball { fill: #3a7fc9; stroke: #1a2338; stroke-width: 0.8; transition: fill 0.15s; }
+.component.closed .float-ball { fill: #43ff8f; }
+
+/* transformador de control (TC) */
+.tc-body { fill: url(#gShell); stroke: #0d1526; stroke-width: 1; }
+.tc-coilA, .tc-coilB { fill: none; stroke: var(--accent2); stroke-width: 2; }
+
+/* banco de capacitores (correccion de factor de potencia) */
+.capbank-body { fill: #1c2740; stroke: #0d1526; stroke-width: 1; }
+.capbank-plate { stroke: #43ff8f; stroke-width: 2; opacity: 0.6; }
+.component.energized .capbank-plate { opacity: 1; filter: drop-shadow(0 0 3px #43ff8f); }
+
+/* fotocelda crepuscular */
+.photocell-dome { fill: #0a1120; stroke: #4a5266; stroke-width: 1; }
+.photocell-eye { fill: #4a3a10; transition: fill 0.15s; }
+.component.closed .photocell-eye { fill: #ffd54f; filter: drop-shadow(0 0 4px #ffd54f); }
 
 /* seleccion de componente (modo libre) */
 .component.selected { filter: drop-shadow(0 0 6px #ffe36b); }
@@ -638,3 +669,25 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
   .wiring-side { position: static; }
   .explorer-layout { grid-template-columns: 1fr; }
 }
+
+/* ---------------- manual de referencia ---------------- */
+
+.ref-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 18px; margin-top: 18px; }
+.ref-card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px;
+}
+.ref-card h3 { color: var(--accent2); font-size: 15px; margin-bottom: 12px; }
+.ref-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.ref-table th {
+  text-align: left; color: var(--ink-dim); font-weight: 600; padding: 5px 8px;
+  border-bottom: 1px solid var(--line); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.3px;
+}
+.ref-table td { padding: 6px 8px; border-bottom: 1px dashed var(--line); vertical-align: top; }
+.ref-table tr:last-child td { border-bottom: none; }
+.swatch {
+  display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px;
+  vertical-align: middle; box-shadow: 0 0 0 1px rgba(255,255,255,0.15) inset;
+}
+.ref-note { margin-top: 10px; font-size: 11.5px; color: var(--ink-dim); line-height: 1.5; }
+.ref-list { margin-top: 4px; padding-left: 18px; font-size: 12.5px; line-height: 1.7; color: var(--ink); }
+.ref-list li { margin-bottom: 4px; }

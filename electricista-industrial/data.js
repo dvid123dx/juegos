@@ -1648,6 +1648,648 @@ const vfdCombined = {
   ],
 };
 
+/* =========================================================
+   EJERCICIO 26: Escalera con Conmutadores de 3 Vías
+   ========================================================= */
+
+const staircaseSwitches = {
+  id: "staircase-switches",
+  group: "residencial",
+  kind: "circuito",
+  level: 1,
+  title: "Escalera con Conmutadores de 3 Vías",
+  brief: "Cablea una lámpara controlada desde dos puntos (arriba y abajo de la escalera) con dos conmutadores de 3 vías. Cada conmutador real es una sola palanca de 3 terminales; aquí se dibuja como dos contactos enlazados (A/B) que siempre están en posiciones opuestas — igual que el brazo mecánico real. La lámpara enciende cuando ambos coinciden en la misma posición.",
+  vb: [620, 460],
+  source: ["railL"],
+  return: ["railN"],
+  components: [
+    railComp("railL", true, 480, "L", 320, 60),
+    railComp("railN", true, 480, "N", 320, 400),
+    C("Q1", "Q1 interruptor", TPL.mcb("Q1", "1", "2"), 220, 130, { toggle: true }),
+    C("SW1a", "SW1", TPL.wayContact("A", "com-a", "com", "a"), 260, 220, { toggle: true, pairedWith: "SW1b" }),
+    C("SW1b", "SW1", TPL.wayContact("B", "com-b", "com", "b"), 360, 220, { toggle: true, pairedWith: "SW1a" }),
+    C("SW2a", "SW2", TPL.wayContact("A", "com-a", "com", "a"), 260, 320, { toggle: true, pairedWith: "SW2b" }),
+    C("SW2b", "SW2", TPL.wayContact("B", "com-b", "com", "b"), 360, 320, { toggle: true, pairedWith: "SW2a" }),
+    C("H1", "H1 lámpara", TPL.lamp("H1", "green"), 500, 320),
+  ],
+  nets: [
+    ["railL", "Q1.1"],
+    ["Q1.2", "SW1a.com", "SW1b.com"],
+    ["SW1a.a", "SW2a.a"],
+    ["SW1b.b", "SW2b.b"],
+    ["SW2a.com", "SW2b.com", "H1.X1"],
+    ["railN", "H1.X2"],
+  ],
+  simulation: [
+    logStep("Ambos interruptores empiezan en posición A — la lámpara está encendida."),
+    actStep((d) => { d.setEnergized("H1", true); }, "Camino cerrado: SW1(A) coincide con SW2(A).", 800),
+    logStep("Subes la escalera y accionas SW2..."),
+    actStep((d) => {
+      d.setClosed("SW2a", false);
+      d.setClosed("SW2b", true);
+      d.setEnergized("H1", false);
+    }, "SW2 pasa a posición B — ya no coincide con SW1(A): la lámpara se apaga.", 900),
+    logStep("Desde arriba, accionas SW2 otra vez..."),
+    actStep((d) => {
+      d.setClosed("SW2a", true);
+      d.setClosed("SW2b", false);
+      d.setEnergized("H1", true);
+    }, "SW2 vuelve a A — coincide de nuevo con SW1: la lámpara enciende. Puedes controlarla desde cualquiera de los dos puntos.", 900),
+  ],
+};
+
+/* =========================================================
+   EJERCICIO 27: Timbre de Puerta con Transformador
+   ========================================================= */
+
+const doorbellCircuit = {
+  id: "doorbell-circuit",
+  group: "residencial",
+  kind: "circuito",
+  level: 1,
+  title: "Timbre de Puerta con Transformador",
+  brief: "El transformador de timbre (TC) reduce la tensión de línea a un valor seguro para el circuito del botón y la chicharra. Cablea L-N a través del TC, el botón S1 y el timbre H1.",
+  vb: [480, 420],
+  source: ["railL"],
+  return: ["railN"],
+  components: [
+    railComp("railL", true, 340, "L", 240, 60),
+    railComp("railN", true, 340, "N", 240, 360),
+    C("TC", "TC timbre", TPL.controlTransformer("TC", "in", "out"), 240, 150),
+    C("S1", "S1 Botón", TPL.button("NO", "3-4", "3", "4"), 240, 250, { manual: true }),
+    C("H1", "H1 Timbre", TPL.horn("TIMBRE"), 240, 320),
+  ],
+  nets: [
+    ["railL", "TC.in"],
+    ["TC.out", "S1.3"],
+    ["S1.4", "H1.X1"],
+    ["railN", "H1.X2"],
+  ],
+  simulation: [
+    logStep("Alguien presiona el botón de la puerta..."),
+    actStep((d) => { d.setClosed("S1", true); d.setEnergized("H1", true); }, "El timbre suena mientras el botón permanece presionado.", 900),
+    actStep((d) => { d.setClosed("S1", false); d.setEnergized("H1", false); }, "Al soltar el botón, el timbre se detiene — no tiene sello, es un contacto momentáneo.", 800),
+  ],
+};
+
+/* =========================================================
+   EJERCICIO 28: Iluminación Automática por Fotocelda
+   ========================================================= */
+
+const photocellLighting = {
+  id: "photocell-lighting",
+  group: "residencial",
+  kind: "circuito",
+  level: 1,
+  title: "Iluminación Automática por Fotocelda",
+  brief: "La fotocelda PC1 detecta la caída de luz natural y energiza K1 para encender el alumbrado exterior automáticamente al anochecer, sin intervención manual.",
+  vb: [560, 460],
+  source: ["railL"],
+  return: ["railN"],
+  components: [
+    railComp("railL", true, 420, "L", 300, 60),
+    railComp("railN", true, 420, "N", 300, 400),
+    C("Q1", "Q1 interruptor", TPL.mcb("Q1", "1", "2"), 220, 130, { toggle: true }),
+    C("PC1", "PC1 fotocelda", TPL.photocell("NO", "1-2", "1", "2"), 220, 220, { manual: true }),
+    C("K1coil", "K1", TPL.coil("K1", "alumbrado"), 220, 320),
+    C("K1aux1", "K1", TPL.contact("NO", "13-14", "13", "14"), 400, 150, { derivedFrom: "K1coil" }),
+    C("H1", "H1 alumbrado", TPL.lamp("H1", "green"), 400, 240),
+  ],
+  nets: [
+    ["railL", "Q1.1", "K1aux1.13"],
+    ["Q1.2", "PC1.1"],
+    ["PC1.2", "K1coil.A1"],
+    ["K1aux1.14", "H1.X1"],
+    ["railN", "K1coil.A2", "H1.X2"],
+  ],
+  simulation: [
+    logStep("Cae la noche — la fotocelda detecta la oscuridad..."),
+    actStep((d) => {
+      d.setClosed("PC1", true);
+      d.setEnergized("K1coil", true);
+      d.setClosed("K1aux1", true);
+      d.setEnergized("H1", true);
+    }, "PC1 cierra, K1 energiza y enciende el alumbrado exterior automáticamente.", 1000),
+    logStep("Amanece — la fotocelda detecta la luz del sol..."),
+    actStep((d) => {
+      d.setClosed("PC1", false);
+      d.setEnergized("K1coil", false);
+      d.setClosed("K1aux1", false);
+      d.setEnergized("H1", false);
+    }, "PC1 abre: el alumbrado se apaga solo, sin que nadie tenga que accionar un interruptor.", 900),
+  ],
+};
+
+/* =========================================================
+   EJERCICIO 29 (COMBINADO): Extractor con Sensor de Humedad
+   ========================================================= */
+
+const humidityFanCombined = {
+  id: "humidity-fan-combined",
+  group: "residencial",
+  kind: "combinado",
+  combined: true,
+  level: 2,
+  title: "Extractor de Baño con Sensor de Humedad — Control y Fuerza Combinados",
+  brief: "El sensor de humedad SH1 detecta el vapor de la regadera y energiza K1, que enciende el extractor. Cablea el control (sensor + contactor + piloto) y la fuerza (motor monofásico del extractor).",
+  control: {
+    source: ["railL"],
+    return: ["railN"],
+    vb: [560, 420],
+    components: [
+      railComp("railL", true, 420, "L", 300, 60),
+      railComp("railN", true, 420, "N", 300, 360),
+      C("Q1", "Q1 interruptor", TPL.mcb("Q1", "1", "2"), 220, 130, { toggle: true }),
+      C("SH1", "SH1 sensor humedad", TPL.inductiveSensor("NO", "1-2", "1", "2"), 220, 220, { manual: true }),
+      C("K1coil", "K1", TPL.coil("K1", "extractor"), 220, 320),
+      C("K1aux1", "K1", TPL.contact("NO", "13-14", "13", "14"), 400, 150, { derivedFrom: "K1coil" }),
+      C("H1", "H1 extractor ON", TPL.lamp("H1", "green"), 400, 240),
+    ],
+    nets: [
+      ["railL", "Q1.1", "K1aux1.13"],
+      ["Q1.2", "SH1.1"],
+      ["SH1.2", "K1coil.A1"],
+      ["K1aux1.14", "H1.X1"],
+      ["railN", "K1coil.A2", "H1.X2"],
+    ],
+  },
+  power: {
+    vb: [360, 420],
+    components: [
+      railComp("railL", true, 260, "L", 200, 60),
+      railComp("railN", true, 260, "N", 200, 360),
+      C("K1a", "K1", TPL.pole("1-2", "1", "2"), 200, 180),
+      C("M", "Extractor", TPL.singlePhaseMotor(), 200, 300),
+    ],
+    nets: [
+      ["railL", "K1a.1"],
+      ["K1a.2", "M.L"],
+      ["railN", "M.N"],
+    ],
+  },
+  simulation: [
+    cLogStep("Alguien se baña — sube la humedad y SH1 la detecta..."),
+    cActStep((dc, dp) => {
+      dc.setClosed("SH1", true);
+      dc.setEnergized("K1coil", true);
+      dc.setClosed("K1aux1", true);
+      dc.setEnergized("H1", true);
+      dp.setClosed("K1a", true);
+      dp.setRunning("M", true);
+    }, "K1 energiza — el extractor arranca automáticamente para ventilar el baño.", 1000),
+    cLogStep("El ambiente se seca y SH1 regresa a reposo..."),
+    cActStep((dc, dp) => {
+      dc.setClosed("SH1", false);
+      dc.setEnergized("K1coil", false);
+      dc.setClosed("K1aux1", false);
+      dc.setEnergized("H1", false);
+      dp.setClosed("K1a", false);
+      dp.setRunning("M", false);
+    }, "SH1 abre: el extractor se detiene.", 900),
+  ],
+};
+
+/* =========================================================
+   EJERCICIO 30 (COMBINADO): Bomba de Agua con Dos Flotadores
+   ========================================================= */
+
+const dualFloatPumpCombined = {
+  id: "dual-float-pump-combined",
+  group: "bombeo",
+  kind: "combinado",
+  combined: true,
+  level: 2,
+  title: "Bomba de Agua con Dos Flotadores — Control y Fuerza Combinados",
+  brief: "El flotador FSlo (NA) arranca la bomba cuando el nivel del tanque baja; el flotador FShi (NC) la detiene cuando el tanque se llena. Cablea el control (flotadores + sello + contactor) y la fuerza (bomba trifásica).",
+  control: {
+    source: ["railL"],
+    return: ["railN"],
+    vb: [640, 460],
+    components: [
+      railComp("railL", true, 500, "L", 340, 60),
+      railComp("railN", true, 500, "N", 340, 400),
+      C("Q1", "Q1 interruptor", TPL.mcb("Q1", "1", "2"), 220, 130, { toggle: true }),
+      C("FShi", "FShi Alto (paro)", TPL.floatSwitch("NC", "1-2", "1", "2"), 220, 220, { manual: true }),
+      C("FSlo", "FSlo Bajo (marcha)", TPL.floatSwitch("NO", "3-4", "3", "4"), 340, 300, { manual: true }),
+      C("K1aux1", "K1 (sello)", TPL.contact("NO", "13-14", "13", "14"), 460, 300, { derivedFrom: "K1coil" }),
+      C("K1coil", "K1", TPL.coil("K1", "bomba"), 340, 380),
+      C("K1aux2", "K1", TPL.contact("NO", "23-24", "23", "24"), 580, 150, { derivedFrom: "K1coil" }),
+      C("H1", "H1 bomba ON", TPL.lamp("H1", "green"), 580, 240),
+    ],
+    nets: [
+      ["railL", "Q1.1", "K1aux2.23"],
+      ["Q1.2", "FShi.1"],
+      ["FShi.2", "FSlo.3", "K1aux1.13"],
+      ["FSlo.4", "K1aux1.14", "K1coil.A1"],
+      ["K1aux2.24", "H1.X1"],
+      ["railN", "K1coil.A2", "H1.X2"],
+    ],
+  },
+  power: {
+    vb: [420, 520],
+    components: [
+      railComp("railL1", true, 300, "L1", 220, 50),
+      railComp("railL2", true, 300, "L2", 220, 90),
+      railComp("railL3", true, 300, "L3", 220, 130),
+      C("K1a", "K1", TPL.pole("1-2", "1", "2"), 140, 220),
+      C("K1b", "K1", TPL.pole("3-4", "3", "4"), 220, 220),
+      C("K1c", "K1", TPL.pole("5-6", "5", "6"), 300, 220),
+      C("F2a", "F2", TPL.pole("1-2", "1", "2"), 140, 320),
+      C("F2b", "F2", TPL.pole("3-4", "3", "4"), 220, 320),
+      C("F2c", "F2", TPL.pole("5-6", "5", "6"), 300, 320),
+      C("M", "Motor Bomba", TPL.motor(true), 220, 440),
+    ],
+    nets: [
+      ["railL1", "K1a.1"],
+      ["railL2", "K1b.3"],
+      ["railL3", "K1c.5"],
+      ["K1a.2", "F2a.1"],
+      ["K1b.4", "F2b.3"],
+      ["K1c.6", "F2c.5"],
+      ["F2a.2", "M.U1"],
+      ["F2b.4", "M.V1"],
+      ["F2c.6", "M.W1"],
+    ],
+  },
+  simulation: [
+    cLogStep("El nivel del tanque baja y FSlo detecta 'nivel bajo'..."),
+    cActStep((dc, dp) => {
+      dc.setClosed("FSlo", true);
+      dc.setEnergized("K1coil", true);
+      dc.setClosed("K1aux1", true);
+      dc.setClosed("K1aux2", true);
+      dc.setEnergized("H1", true);
+      dp.setClosed("K1a", true);
+      dp.setClosed("K1b", true);
+      dp.setClosed("K1c", true);
+      dp.setRunning("M", true);
+    }, "K1 se sella y arranca la bomba — empieza a llenar el tanque.", 1000),
+    cActStep((dc) => { dc.setClosed("FSlo", false); }, "FSlo regresa a reposo — no importa, K1 ya se selló.", 700),
+    cLogStep("El tanque se llena y llega a FShi..."),
+    cActStep((dc, dp) => {
+      dc.setClosed("FShi", false);
+      dc.setEnergized("K1coil", false);
+      dc.setClosed("K1aux1", false);
+      dc.setClosed("K1aux2", false);
+      dc.setEnergized("H1", false);
+      dp.setClosed("K1a", false);
+      dp.setClosed("K1b", false);
+      dp.setClosed("K1c", false);
+      dp.setRunning("M", false);
+    }, "FShi abre y corta la alimentación de K1 de inmediato — la bomba se detiene con el tanque lleno.", 1000),
+    cActStep((dc) => { dc.setClosed("FShi", true); }, "El nivel baja un poco y FShi regresa a reposo (cerrado), listo para el siguiente ciclo.", 700),
+  ],
+};
+
+/* =========================================================
+   EJERCICIO 31 (COMBINADO): Banco de Capacitores (Corrección
+   de Factor de Potencia)
+   ========================================================= */
+
+const capacitorBankCombined = {
+  id: "capacitor-bank-combined",
+  group: "eficiencia",
+  kind: "combinado",
+  combined: true,
+  level: 2,
+  title: "Banco de Capacitores para Corrección de Factor de Potencia — Control y Fuerza Combinados",
+  brief: "Los motores de inducción consumen energía reactiva que reduce el factor de potencia. Un banco de capacitores conectado en paralelo la compensa. Cablea el control (arranque-paro con sello) y la fuerza del contactor que energiza el banco.",
+  control: {
+    source: ["railL"],
+    return: ["railN"],
+    vb: [560, 460],
+    components: [
+      railComp("railL", true, 420, "L", 300, 60),
+      railComp("railN", true, 420, "N", 300, 400),
+      C("F2", "F2 térmico", TPL.contact("NC", "95-96", "95", "96"), 220, 130),
+      C("S0", "S0 Paro", TPL.button("NC", "1-2", "1", "2"), 220, 210, { manual: true }),
+      C("S1", "S1 Marcha", TPL.button("NO", "3-4", "3", "4"), 170, 300, { manual: true }),
+      C("K1aux1", "K1 (sello)", TPL.contact("NO", "13-14", "13", "14"), 270, 300, { derivedFrom: "K1coil" }),
+      C("K1coil", "K1", TPL.coil("K1", "capacitores"), 220, 400),
+      C("K1aux2", "K1", TPL.contact("NO", "23-24", "23", "24"), 400, 150, { derivedFrom: "K1coil" }),
+      C("H1", "H1 FP corregido", TPL.lamp("H1", "green"), 400, 240),
+    ],
+    nets: [
+      ["railL", "F2.95", "K1aux2.23"],
+      ["F2.96", "S0.1"],
+      ["S0.2", "S1.3", "K1aux1.13"],
+      ["S1.4", "K1aux1.14", "K1coil.A1"],
+      ["K1aux2.24", "H1.X1"],
+      ["railN", "K1coil.A2", "H1.X2"],
+    ],
+  },
+  power: {
+    vb: [360, 420],
+    components: [
+      railComp("railL", true, 260, "L", 200, 60),
+      railComp("railN", true, 260, "N", 200, 360),
+      C("K1a", "K1", TPL.pole("1-2", "1", "2"), 200, 180),
+      C("CB1", "Banco Capacitores", TPL.capacitorBank("CB1"), 200, 300),
+    ],
+    nets: [
+      ["railL", "K1a.1"],
+      ["K1a.2", "CB1.X1"],
+      ["railN", "CB1.X2"],
+    ],
+  },
+  simulation: [
+    cLogStep("Presionas S1 (marcha)..."),
+    cActStep((dc, dp) => {
+      dc.setClosed("S1", true);
+      dc.setEnergized("K1coil", true);
+      dc.setClosed("K1aux1", true);
+      dc.setClosed("K1aux2", true);
+      dc.setEnergized("H1", true);
+      dp.setClosed("K1a", true);
+    }, "K1 energiza y conecta el banco de capacitores en paralelo con la instalación.", 900),
+    cActStep((dc) => { dc.setClosed("S1", false); }, "Sueltas S1 — K1 se mantiene por el sello. El factor de potencia mejora, reduciendo pérdidas y el costo de energía reactiva.", 900),
+  ],
+};
+
+/* =========================================================
+   EJERCICIO 32: Semáforo de Tráfico con Temporizadores
+   ========================================================= */
+
+const trafficLightSequencer = {
+  id: "traffic-light-sequencer",
+  group: "automatizacion",
+  kind: "circuito",
+  level: 2,
+  title: "Semáforo de Tráfico con Temporizadores",
+  brief: "Un ciclo automático rojo → verde → amarillo → rojo, usando temporizadores encadenados (la salida de cada uno dispara al siguiente). Cablea S1 (arranque del ciclo), KT1/KT2 y las tres lámparas. Es la misma técnica de temporización que un arrancador estrella-triángulo, aplicada a una secuencia de señales en vez de un motor.",
+  vb: [800, 460],
+  source: ["railL"],
+  return: ["railN"],
+  components: [
+    railComp("railL", true, 660, "L", 420, 60),
+    railComp("railN", true, 660, "N", 420, 400),
+    C("S1", "S1 Arranca ciclo", TPL.button("NO", "3-4", "3", "4"), 200, 140, { manual: true }),
+    C("CRaux1", "CR (sello)", TPL.contact("NO", "13-14", "13", "14"), 320, 140, { derivedFrom: "CRcoil" }),
+    C("CRcoil", "CR", TPL.coil("CR", "ciclo activo"), 200, 240),
+    C("KT1coil", "KT1", TPL.coil("KT1", "rojo"), 340, 240),
+    C("KT1no", "KT1 (rojo→verde)", TPL.contact("NO", "15-18", "15", "18"), 480, 140, { timedFrom: { coil: "KT1coil", delayMs: 2500 } }),
+    C("KT2coil", "KT2", TPL.coil("KT2", "verde"), 560, 240),
+    C("KT2no", "KT2 (verde→ámbar)", TPL.contact("NO", "15-18", "15", "18"), 700, 140, { timedFrom: { coil: "KT2coil", delayMs: 2200 } }),
+    C("HR", "Rojo", TPL.lamp("R", "red"), 200, 340),
+    C("HG", "Verde", TPL.lamp("G", "green"), 340, 340),
+    C("HA", "Ámbar", TPL.lamp("A", "red"), 560, 340),
+  ],
+  nets: [
+    ["railL", "S1.3"],
+    ["S1.4", "CRaux1.13"],
+    ["CRaux1.14", "CRcoil.A1", "KT1coil.A1", "HR.X1"],
+    ["KT1no.15", "KT1coil.A2"],
+    ["KT1no.18", "KT2coil.A1", "HG.X1"],
+    ["KT2no.15", "KT2coil.A2"],
+    ["KT2no.18", "HA.X1"],
+    ["railN", "CRcoil.A2", "HR.X2", "HG.X2", "HA.X2"],
+  ],
+  simulation: [
+    logStep("Presionas S1 para arrancar el ciclo..."),
+    actStep((d) => {
+      d.setClosed("S1", true);
+      d.setEnergized("CRcoil", true);
+      d.setClosed("CRaux1", true);
+      d.setEnergized("KT1coil", true);
+      d.setEnergized("HR", true);
+    }, "CR se sella y arranca KT1: el semáforo queda en ROJO.", 900),
+    actStep((d) => { d.setClosed("S1", false); }, "Sueltas S1 — el ciclo sigue solo, sellado por CR.", 700),
+    logStep("Transcurren 2.5s en rojo..."),
+    actStep((d) => {
+      d.setClosed("KT1no", true);
+      d.setEnergized("KT2coil", true);
+      d.setEnergized("HR", false);
+      d.setEnergized("HG", true);
+    }, "KT1 vence: se apaga el rojo y enciende el VERDE, arrancando KT2.", 900),
+    logStep("Transcurren 2.2s en verde..."),
+    actStep((d) => {
+      d.setClosed("KT2no", true);
+      d.setEnergized("HG", false);
+      d.setEnergized("HA", true);
+    }, "KT2 vence: se apaga el verde y enciende el ÁMBAR.", 900),
+  ],
+};
+
+/* =========================================================
+   EJERCICIO 33 (COMBINADO, AVANZADO): Puerta Corrediza
+   Automática (reversible con fines de carrera)
+   ========================================================= */
+
+const slidingDoorCombined = {
+  id: "sliding-door-combined",
+  group: "avanzado",
+  kind: "combinado",
+  combined: true,
+  level: 3,
+  title: "Puerta Corrediza Automática — Control y Fuerza Combinados",
+  brief: "KA (abrir) y KC (cerrar) mueven la puerta en direcciones opuestas, enclavados entre sí como un reversible. En vez de soltar el botón, cada dirección se detiene sola al llegar a su fin de carrera (LSA / LSC). Nivel avanzado: combina sello, enclavamiento, fines de carrera y control+fuerza.",
+  control: {
+    source: ["railL"],
+    return: ["railN"],
+    vb: [880, 540],
+    components: [
+      railComp("railL", true, 680, "L", 440, 60),
+      railComp("railN", true, 680, "N", 440, 500),
+      C("F2", "F2 térmico", TPL.contact("NC", "95-96", "95", "96"), 400, 140),
+      C("S1", "S1 Abrir", TPL.button("NO", "3-4", "3", "4"), 140, 260, { manual: true }),
+      C("KAaux1", "KA (sello)", TPL.contact("NO", "13-14", "13", "14"), 280, 260, { derivedFrom: "KAcoil" }),
+      C("LSA", "LSA Fin Abierto", TPL.limitSwitch("NC", "1-2", "1", "2"), 200, 340, { manual: true }),
+      C("KCaux_i", "KC (enclav.)", TPL.contact("NC", "21-22", "21", "22"), 360, 340, { derivedFrom: "KCcoil" }),
+      C("KAcoil", "KA", TPL.coil("KA", "abrir"), 200, 440),
+      C("S2", "S2 Cerrar", TPL.button("NO", "3-4", "3", "4"), 600, 260, { manual: true }),
+      C("KCaux1", "KC (sello)", TPL.contact("NO", "13-14", "13", "14"), 740, 260, { derivedFrom: "KCcoil" }),
+      C("KAaux_i", "KA (enclav.)", TPL.contact("NC", "21-22", "21", "22"), 460, 340, { derivedFrom: "KAcoil" }),
+      C("LSC", "LSC Fin Cerrado", TPL.limitSwitch("NC", "1-2", "1", "2"), 620, 340, { manual: true }),
+      C("KCcoil", "KC", TPL.coil("KC", "cerrar"), 620, 440),
+    ],
+    nets: [
+      ["railL", "F2.95"],
+      ["F2.96", "S1.3", "KAaux1.13", "S2.3", "KCaux1.13"],
+      ["S1.4", "KAaux1.14", "LSA.1"],
+      ["LSA.2", "KCaux_i.21"],
+      ["KCaux_i.22", "KAcoil.A1"],
+      ["S2.4", "KCaux1.14", "LSC.1"],
+      ["LSC.2", "KAaux_i.21"],
+      ["KAaux_i.22", "KCcoil.A1"],
+      ["railN", "KAcoil.A2", "KCcoil.A2"],
+    ],
+  },
+  power: {
+    vb: [760, 520],
+    components: [
+      railComp("railL1", true, 560, "L1", 380, 50),
+      railComp("railL2", true, 560, "L2", 380, 90),
+      railComp("railL3", true, 560, "L3", 380, 130),
+      C("KAa", "KA", TPL.pole("1-2", "1", "2"), 160, 220),
+      C("KAb", "KA", TPL.pole("3-4", "3", "4"), 240, 220),
+      C("KAc", "KA", TPL.pole("5-6", "5", "6"), 320, 220),
+      C("KCa", "KC", TPL.pole("1-2", "1", "2"), 440, 220),
+      C("KCb", "KC", TPL.pole("3-4", "3", "4"), 520, 220),
+      C("KCc", "KC", TPL.pole("5-6", "5", "6"), 600, 220),
+      C("F2a", "F2", TPL.pole("1-2", "1", "2"), 300, 320),
+      C("F2b", "F2", TPL.pole("3-4", "3", "4"), 380, 320),
+      C("F2c", "F2", TPL.pole("5-6", "5", "6"), 460, 320),
+      C("M", "Motor Puerta", TPL.motor(true), 380, 440),
+    ],
+    nets: [
+      ["railL1", "KAa.1", "KCb.3"],
+      ["railL2", "KAb.3", "KCa.1"],
+      ["railL3", "KAc.5", "KCc.5"],
+      ["KAa.2", "KCa.2", "F2a.1"],
+      ["KAb.4", "KCb.4", "F2b.3"],
+      ["KAc.6", "KCc.6", "F2c.5"],
+      ["F2a.2", "M.U1"],
+      ["F2b.4", "M.V1"],
+      ["F2c.6", "M.W1"],
+    ],
+  },
+  simulation: [
+    cLogStep("Presionas S1 (abrir)..."),
+    cActStep((dc, dp) => {
+      dc.setClosed("S1", true);
+      dc.setEnergized("KAcoil", true);
+      dc.setClosed("KAaux1", true);
+      dc.setClosed("KAaux_i", false);
+      dp.setClosed("KAa", true); dp.setClosed("KAb", true); dp.setClosed("KAc", true);
+      dp.setRunning("M", true);
+    }, "KA se energiza y se sella — la puerta empieza a abrir. KC queda bloqueado.", 900),
+    cActStep((dc) => { dc.setClosed("S1", false); }, "Sueltas S1 — KA se mantiene por el sello mientras la puerta se mueve.", 800),
+    cLogStep("La puerta llega al tope y acciona LSA..."),
+    cActStep((dc, dp) => {
+      dc.setClosed("LSA", false);
+      dc.setEnergized("KAcoil", false);
+      dc.setClosed("KAaux1", false);
+      dc.setClosed("KAaux_i", true);
+      dp.setClosed("KAa", false); dp.setClosed("KAb", false); dp.setClosed("KAc", false);
+      dp.setRunning("M", false);
+    }, "LSA abre: KA pierde alimentación de inmediato — la puerta se detiene sola, totalmente abierta.", 1000),
+    cActStep((dc) => { dc.setClosed("LSA", true); }, "LSA regresa a reposo (cerrado) al alejarse la puerta del tope.", 600),
+    cLogStep("Presionas S2 (cerrar)..."),
+    cActStep((dc, dp) => {
+      dc.setClosed("S2", true);
+      dc.setEnergized("KCcoil", true);
+      dc.setClosed("KCaux1", true);
+      dc.setClosed("KCaux_i", false);
+      dp.setClosed("KCa", true); dp.setClosed("KCb", true); dp.setClosed("KCc", true);
+      dp.setRunning("M", true);
+    }, "KC se energiza y se sella — la puerta cierra en sentido contrario. KA queda bloqueado.", 900),
+    cActStep((dc) => { dc.setClosed("S2", false); }, "Sueltas S2 — KC se mantiene por el sello.", 800),
+    cLogStep("La puerta llega al otro tope y acciona LSC..."),
+    cActStep((dc, dp) => {
+      dc.setClosed("LSC", false);
+      dc.setEnergized("KCcoil", false);
+      dc.setClosed("KCaux1", false);
+      dc.setClosed("KCaux_i", true);
+      dp.setClosed("KCa", false); dp.setClosed("KCb", false); dp.setClosed("KCc", false);
+      dp.setRunning("M", false);
+    }, "LSC abre: KC se detiene sola — puerta totalmente cerrada.", 1000),
+    cActStep((dc) => { dc.setClosed("LSC", true); }, "LSC regresa a reposo. Listo para el siguiente ciclo.", 600),
+  ],
+};
+
+/* =========================================================
+   EJERCICIO: Paro de Emergencia con Relé Maestro (MCR) — CONTROL
+   ========================================================= */
+
+const estopMcrControl = {
+  id: "estop-mcr-control",
+  level: 2,
+  group: "seguridad",
+  kind: "control",
+  title: "Paro de Emergencia con Relé Maestro (MCR) — Circuito de Control",
+  brief: "Cablea un Relé Maestro de Control (KA): el paro de emergencia E1 y el botón de rearme S3 sellan la bobina KA a través de KAaux1; sus contactos auxiliares KAaux2/3/4 habilitan una 'barra segura' de la que cuelgan DOS arranques independientes (K1 y K2), cada uno con su propio térmico, paro y marcha. Agrega los pilotos H1 (MCR activo) y H2 (emergencia). Al presionar E1 ambos motores deben detenerse de inmediato sin importar sus propios botones, y KA no debe rearmar sola: hay que presionar S3 otra vez.",
+  vb: [820, 720],
+  source: ["railL"],
+  return: ["railN"],
+  components: [
+    railComp("railL", true, 680, "L", 400, 60),
+    railComp("railN", true, 680, "N", 400, 680),
+
+    C("E1", "E1 Paro Emergencia", TPL.emergencyStop("1", "1", "2"), 120, 140, { manual: true }),
+    C("S3", "S3 Rearme MCR", TPL.button("NO", "3-4", "3", "4"), 120, 220, { manual: true }),
+    C("KAaux1", "KA (sello)", TPL.contact("NO", "13-14", "13", "14"), 220, 220, { derivedFrom: "KAcoil" }),
+    C("KAcoil", "KA", TPL.coil("KA", "MCR"), 120, 320),
+
+    C("KAaux2", "KA (barra segura)", TPL.contact("NO", "23-24", "23", "24"), 340, 140, { derivedFrom: "KAcoil" }),
+    C("KAaux3", "KA", TPL.contact("NO", "33-34", "33", "34"), 480, 140, { derivedFrom: "KAcoil" }),
+    C("KAaux4", "KA", TPL.contact("NC", "41-42", "41", "42"), 620, 140, { derivedFrom: "KAcoil" }),
+    C("H1", "H1 MCR activo", TPL.lamp("H1", "green"), 480, 230),
+    C("H2", "H2 Emergencia", TPL.lamp("H2", "red"), 620, 230),
+
+    C("F2A", "F2A térmico", TPL.contact("NC", "95-96", "95", "96"), 180, 380),
+    C("S0A", "S0A Paro", TPL.button("NC", "1-2", "1", "2"), 180, 460, { manual: true }),
+    C("S1A", "S1A Marcha", TPL.button("NO", "3-4", "3", "4"), 120, 540, { manual: true }),
+    C("K1auxA", "K1 (sello)", TPL.contact("NO", "13-14", "13", "14"), 240, 540, { derivedFrom: "K1coilA" }),
+    C("K1coilA", "K1", TPL.coil("K1", "motor A"), 180, 620),
+
+    C("F2B", "F2B térmico", TPL.contact("NC", "95-96", "95", "96"), 480, 380),
+    C("S0B", "S0B Paro", TPL.button("NC", "1-2", "1", "2"), 480, 460, { manual: true }),
+    C("S1B", "S1B Marcha", TPL.button("NO", "3-4", "3", "4"), 420, 540, { manual: true }),
+    C("K2auxB", "K2 (sello)", TPL.contact("NO", "13-14", "13", "14"), 540, 540, { derivedFrom: "K2coilB" }),
+    C("K2coilB", "K2", TPL.coil("K2", "motor B"), 480, 620),
+  ],
+  nets: [
+    ["railL", "E1.1", "KAaux2.23", "KAaux3.33", "KAaux4.41"],
+    ["E1.2", "S3.3", "KAaux1.13"],
+    ["S3.4", "KAaux1.14", "KAcoil.A1"],
+    ["KAaux2.24", "F2A.95", "F2B.95"],
+    ["KAaux3.34", "H1.X1"],
+    ["KAaux4.42", "H2.X1"],
+    ["F2A.96", "S0A.1"],
+    ["S0A.2", "S1A.3", "K1auxA.13"],
+    ["S1A.4", "K1auxA.14", "K1coilA.A1"],
+    ["F2B.96", "S0B.1"],
+    ["S0B.2", "S1B.3", "K2auxB.13"],
+    ["S1B.4", "K2auxB.14", "K2coilB.A1"],
+    ["railN", "KAcoil.A2", "H1.X2", "H2.X2", "K1coilA.A2", "K2coilB.A2"],
+  ],
+  simulation: [
+    logStep("Al inicio, KA está desenergizada: H2 (rojo) indica 'sistema no habilitado'."),
+    logStep("Presionas S3 (rearme del relé maestro MCR)..."),
+    actStep((d) => { d.setClosed("S3", true); }, null, 500),
+    actStep((d) => {
+      d.setEnergized("KAcoil", true);
+      d.setClosed("KAaux1", true);
+      d.setClosed("KAaux2", true);
+      d.setClosed("KAaux3", true);
+      d.setClosed("KAaux4", false);
+      d.setEnergized("H1", true);
+      d.setEnergized("H2", false);
+    }, "KA se energiza: se sella (13-14), habilita la barra segura (KAaux2) y enciende H1.", 900),
+    actStep((d) => { d.setClosed("S3", false); }, "Sueltas S3 — KA se mantiene sellada.", 800),
+    logStep("Presionas S1A (marcha motor A)..."),
+    actStep((d) => { d.setClosed("S1A", true); }, null, 500),
+    actStep((d) => {
+      d.setEnergized("K1coilA", true);
+      d.setClosed("K1auxA", true);
+    }, "K1 arranca (motor A) — la barra segura ya tenía alimentación gracias a KA.", 900),
+    actStep((d) => { d.setClosed("S1A", false); }, "Sueltas S1A — K1 se sella.", 800),
+    logStep("Presionas S1B (marcha motor B)..."),
+    actStep((d) => { d.setClosed("S1B", true); }, null, 500),
+    actStep((d) => {
+      d.setEnergized("K2coilB", true);
+      d.setClosed("K2auxB", true);
+    }, "K2 también arranca (motor B) — ambos motores en marcha simultánea.", 900),
+    actStep((d) => { d.setClosed("S1B", false); }, "Sueltas S1B.", 800),
+    logStep("Ahora presionas el PARO DE EMERGENCIA E1 (sin tocar S0A ni S0B)..."),
+    actStep((d) => { d.setClosed("E1", false); }, null, 500),
+    actStep((d) => {
+      d.setEnergized("KAcoil", false);
+      d.setClosed("KAaux1", false);
+      d.setClosed("KAaux2", false);
+      d.setClosed("KAaux3", false);
+      d.setClosed("KAaux4", true);
+      d.setEnergized("H1", false);
+      d.setEnergized("H2", true);
+      d.setEnergized("K1coilA", false);
+      d.setClosed("K1auxA", false);
+      d.setEnergized("K2coilB", false);
+      d.setClosed("K2auxB", false);
+    }, "KA se desenergiza al instante: se abre KAaux2 y corta la barra segura — K1 Y K2 se detienen juntos, aunque sus propios botones no se tocaron.", 1200),
+    actStep((d) => { d.setClosed("E1", true); }, "Giras y liberas E1 (vuelve a cerrar) — pero KA NO arranca sola: hay que presionar S3 otra vez para reponer el sistema.", 900),
+  ],
+};
+
 const EXERCISES = [
   dolControl, dolPower, revControl, ydControl, ydPower, autoControl, autoPower,
   twoSpeedControl, twoSpeedPower, alarmControl,
@@ -1655,6 +2297,66 @@ const EXERCISES = [
   softStarterControl, softStarterPower, sequentialControl,
   ydRevControl, conveyorControl, conveyorPower, vfdCombined,
   singlePhaseMotorCombined, twoPhaseHeaterCombined, sensorActuatorCombined,
+  staircaseSwitches, doorbellCircuit, photocellLighting, humidityFanCombined,
+  dualFloatPumpCombined, capacitorBankCombined, trafficLightSequencer,
+  slidingDoorCombined, estopMcrControl,
+];
+
+/* =========================================================
+   Modo Diagnostico: circuitos pre-cableados con UNA falla real
+   que hay que encontrar y corregir — como en un tablero de verdad.
+   ========================================================= */
+
+const DIAGNOSTICS = [
+  {
+    id: "diag-dol",
+    title: "Arranque Directo: el motor no se sella",
+    symptom: "Reportan que el motor SOLO gira mientras se mantiene presionado S1 (marcha) — en cuanto se suelta, se detiene. Debería quedarse sellado. Encuentra el cable mal conectado y corrígelo (haz clic para quitarlo, luego conecta el correcto).",
+    exercise: dolControl,
+    faultWires: [
+      ["railL", "F2.95"], ["railL", "K1aux2.23"], ["railL", "K1aux3.21"],
+      ["F2.96", "S0.1"],
+      ["S0.2", "S1.3"], ["S0.2", "K1aux1.13"],
+      ["S0.2", "K1aux1.14"],
+      ["S1.4", "K1coil.A1"],
+      ["railN", "K1coil.A2"], ["railN", "H1.X2"], ["railN", "H2.X2"],
+      ["K1aux2.24", "H1.X1"],
+      ["K1aux3.22", "H2.X1"],
+    ],
+  },
+  {
+    id: "diag-yd",
+    title: "Estrella-Triángulo: arranca directo en triángulo",
+    symptom: "Reportan que el motor arranca directamente en TRIÁNGULO (a tensión plena), sin pasar por la etapa de estrella — se pierde por completo la reducción de corriente de arranque. Encuentra el cruce de cables en la etapa del temporizador.",
+    exercise: ydControl,
+    faultWires: [
+      ["railL", "F2.95"],
+      ["F2.96", "S0.1"],
+      ["S0.2", "S1.3"], ["S0.2", "K1aux1.13"],
+      ["S1.4", "K1aux1.14"], ["S1.4", "K1coil.A1"], ["S1.4", "KTcoil.A1"], ["S1.4", "KTnc.15"], ["S1.4", "KTno.15"],
+      ["KTnc.16", "K2auxNC.21"],
+      ["K3auxNC.22", "K2coil.A1"],
+      ["KTno.18", "K3auxNC.21"],
+      ["K2auxNC.22", "K3coil.A1"],
+      ["railN", "K1coil.A2"], ["railN", "KTcoil.A2"], ["railN", "K2coil.A2"], ["railN", "K3coil.A2"],
+    ],
+  },
+  {
+    id: "diag-rev",
+    title: "Inversión de Giro: los botones quedaron cruzados",
+    symptom: "Reportan que al presionar S1 (adelante) el motor gira en REVERSA, y al presionar S2 (reversa) gira ADELANTE — como si alguien hubiera cruzado los botones de mando. Encuentra dónde se cruzaron los cables.",
+    exercise: revControl,
+    faultWires: [
+      ["railL", "F2.95"],
+      ["F2.96", "S0.1"],
+      ["S0.2", "S1.3"], ["S0.2", "KFaux1.13"], ["S0.2", "S2.3"], ["S0.2", "KRaux1.13"],
+      ["S1.4", "KRaux1.14"], ["S1.4", "KFaux_i1.21"],
+      ["KFaux_i1.22", "KRcoil.A1"],
+      ["S2.4", "KFaux1.14"], ["S2.4", "KRaux_i1.21"],
+      ["KRaux_i1.22", "KFcoil.A1"],
+      ["railN", "KFcoil.A2"], ["railN", "KRcoil.A2"],
+    ],
+  },
 ];
 
 /* =========================================================
@@ -1804,50 +2506,89 @@ const EXPLORER = [
    ========================================================= */
 
 const QUIZ = [
-  { q: "¿Para qué sirve el contacto auxiliar 13-14 de un contactor en un circuito de arranque-paro?", a: ["Como contacto de sello para mantener energizada la bobina al soltar el botón de marcha", "Para proteger contra sobrecarga", "Para invertir el giro del motor", "Para reducir la tensión de arranque"], correct: 0 },
-  { q: "¿Por qué el botón de paro (S0) es normalmente cerrado (NC)?", a: ["Porque así se ve mejor en el tablero", "Para que, si se rompe el cable, el circuito falle hacia un estado seguro (paro)", "Porque los botones NC son más baratos", "No hay una razón técnica"], correct: 1 },
-  { q: "En un arranque estrella-triángulo, ¿qué contactor permanece cerrado durante todo el arranque y la marcha?", a: ["K2 (estrella)", "K3 (triángulo)", "K1 (línea)", "Ninguno, los tres alternan"], correct: 2 },
-  { q: "¿Cuál es la reducción aproximada de corriente de línea en el arranque estrella-triángulo respecto al arranque directo?", a: ["A la mitad (50%)", "A un tercio (33%)", "Se mantiene igual", "Se reduce al 65%"], correct: 1 },
-  { q: "¿Qué función cumple el contactor K2 en el arranque estrella-triángulo?", a: ["Conecta el motor directo a línea", "Puentea U2-V2-W2 para formar el punto estrella", "Alimenta el temporizador", "Protege contra sobrecarga"], correct: 1 },
-  { q: "¿Por qué es indispensable el enclavamiento eléctrico entre K2 y K3?", a: ["Para ahorrar cableado", "Para evitar que ambos cierren al mismo tiempo y provoquen un cortocircuito entre fases", "Para que enciendan las lámparas piloto", "Es solo una recomendación estética"], correct: 1 },
-  { q: "En el arranque por autotransformador, ¿qué hace el contactor KC ('común')?", a: ["Conecta el motor directo a línea", "Cierra el punto común/neutro del autotransformador para que actúe como tal durante el arranque", "Reemplaza al relé térmico", "Selecciona el sentido de giro"], correct: 1 },
-  { q: "¿Qué ventaja tiene el arranque por autotransformador frente al estrella-triángulo?", a: ["Es más barato siempre", "Permite elegir el % de tensión de arranque mediante derivaciones (taps) y suele dar mejor par de arranque por amperio", "No necesita temporizador", "No requiere protección térmica"], correct: 1 },
-  { q: "¿Qué terminales estándar (IEC) corresponden a la bobina de un contactor?", a: ["1-2", "13-14", "A1-A2", "95-96"], correct: 2 },
-  { q: "¿Qué terminales estándar corresponden al contacto de protección (NC) de un relé térmico?", a: ["95-96", "13-14", "A1-A2", "21-22"], correct: 0 },
-  { q: "En la caja de conexiones de un motor trifásico, ¿qué terminales se puentean para formar el triángulo (delta)?", a: ["U1-V1, V1-W1, W1-U1", "U1-W2, V1-U2, W1-V2", "U2-V2-W2 entre sí", "No se puentea nada, se deja abierto"], correct: 1 },
-  { q: "¿Qué se hace en la caja de conexiones para formar la conexión estrella?", a: ["Se puentean U1-W2, V1-U2, W1-V2", "Se puentean U2, V2 y W2 entre sí y se alimenta U1-V1-W1", "Se puentea U1 con V1", "Se deja el motor sin puentes"], correct: 1 },
-  { q: "¿Cuál de estas es una razón para usar un botón normalmente abierto (NA) para 'marcha'?", a: ["Para que el motor solo arranque cuando se da una orden activa y explícita", "Porque es más barato", "Porque así el motor arranca solo", "No tiene ninguna ventaja sobre uno NC"], correct: 0 },
-  { q: "¿Qué pasaría si en un arranque directo se conecta el contacto de sello (13-14) en serie con el botón de marcha en vez de en paralelo?", a: ["Funcionaría igual de bien", "El motor solo funcionaría mientras se mantenga presionado el botón de marcha (no habría memoria/sello)", "El motor arrancaría en reversa", "Se quemaría el fusible inmediatamente"], correct: 1 },
-  { q: "¿Cuál es el propósito del relé de tiempo (KT) en el arranque estrella-triángulo?", a: ["Proteger contra sobrecarga", "Medir el tiempo que el motor permanece en estrella antes de conmutar a triángulo", "Encender las lámparas piloto", "Invertir el sentido de giro"], correct: 1 },
-  { q: "¿Qué es un enclavamiento mecánico entre dos contactores?", a: ["Un software que impide que ambos cierren", "Un dispositivo físico que impide que ambas bobinas cierren sus contactos simultáneamente, como respaldo del enclavamiento eléctrico", "Un tipo de fusible", "Un relé térmico especial"], correct: 1 },
-  { q: "¿Cuál es la función principal del guardamotor (interruptor termomagnético) antes del contactor?", a: ["Encender el piloto verde", "Proteger contra cortocircuitos y sobrecargas, y permitir desconexión manual", "Reducir la tensión de arranque", "Invertir el sentido de giro"], correct: 1 },
-  { q: "Para invertir el sentido de giro de un motor trifásico, ¿qué se debe hacer?", a: ["Invertir dos de las tres fases de alimentación", "Invertir las tres fases", "Cambiar la tensión de control", "Agregar un temporizador"], correct: 0 },
-  { q: "¿Por qué KF y KR (adelante/reversa) deben tener enclavamiento eléctrico Y mecánico?", a: ["Por estética", "Porque si ambos cerraran a la vez se produciría un cortocircuito franco entre fases", "Porque lo exige el color del botón", "No es necesario, basta con uno"], correct: 1 },
-  { q: "¿Qué ocurre eléctricamente si dos contactos NC de enclavamiento fallan y ambos contactores cierran a la vez en un arrancador reversible?", a: ["El motor gira más rápido", "Se produce un cortocircuito línea-línea a través de ambos juegos de contactos", "No pasa nada relevante", "El motor se detiene suavemente"], correct: 1 },
-  { q: "¿Qué representa la 'M 3~' dentro del círculo en un diagrama?", a: ["Un motor monofásico", "Un motor trifásico", "Un medidor de corriente", "Un transformador"], correct: 1 },
-  { q: "¿Cuál de los siguientes NO es un método de arranque a tensión reducida?", a: ["Estrella-triángulo", "Autotransformador", "Arranque directo (DOL)", "Arrancador suave (soft starter)"], correct: 2 },
-  { q: "¿Qué ventaja tiene un arrancador a tensión reducida sobre uno directo?", a: ["Ninguna, siempre es mejor el directo", "Reduce la corriente de arranque y el golpe mecánico/eléctrico sobre la instalación", "Hace girar el motor más rápido", "Elimina la necesidad de protección térmica"], correct: 1 },
-  { q: "En el circuito de fuerza del autotransformador, ¿qué contactor queda sin corriente durante la marcha normal (después de la transición)?", a: ["KL", "F2", "KS y KC (el autotransformador queda fuera de servicio)", "Ninguno, todos permanecen activos"], correct: 2 },
-  { q: "En un motor Dahlander (dos velocidades), ¿qué hace el contactor KM2 en alta velocidad?", a: ["Alimenta directamente el devanado de alta", "Puentea entre sí las terminales del devanado de baja velocidad (doble estrella)", "Protege contra sobrecarga", "Selecciona el sentido de giro"], correct: 1 },
-  { q: "¿Por qué un motor de dos velocidades normalmente lleva DOS relés térmicos distintos?", a: ["Por error de diseño", "Porque cada velocidad tiene una corriente nominal distinta y necesita su propio ajuste de protección", "Porque los térmicos se dañan rápido", "No es cierto, siempre se usa uno solo"], correct: 1 },
-  { q: "¿Qué función cumple un interruptor de límite (fin de carrera) en una máquina?", a: ["Mide la temperatura del motor", "Detecta mecánicamente que una pieza móvil llegó a una posición determinada", "Reduce la tensión de arranque", "Sustituye al relé térmico"], correct: 1 },
-  { q: "¿Para qué se usa un relé auxiliar de control (CR) en vez de aprovechar los contactos del propio contactor?", a: ["Para que se vea más complicado el tablero", "Cuando se necesitan más contactos auxiliares de los que trae el contactor, o para aislar niveles de tensión", "Porque los contactores no tienen bobina", "No tiene ninguna utilidad real"], correct: 1 },
-  { q: "¿Por qué un variador de frecuencia (VFD) no necesita contactores separados ni enclavamiento mecánico entre adelante y reversa?", a: ["Porque no puede invertir el giro", "Porque el propio variador gestiona la conmutación internamente de forma segura mediante software", "Porque siempre gira en un solo sentido", "Porque no lleva electrónica de potencia"], correct: 1 },
-  { q: "¿Qué hace un chopper (convertidor DC-DC) en un accionamiento de motor DC?", a: ["Convierte AC a DC únicamente", "Recorta un voltaje DC fijo mediante PWM para entregar un voltaje DC promedio variable y así regular la velocidad", "Mide la corriente del motor", "Sustituye al relé térmico"], correct: 1 },
-  { q: "¿Cuál es la ventaja principal de usar un variador de frecuencia frente a un arranque estrella-triángulo o por autotransformador?", a: ["Es siempre más barato en cualquier caso", "Permite un arranque suave con rampa de velocidad continua y control total de la velocidad en marcha, no solo al arrancar", "No requiere ningún cableado de fuerza", "Elimina la necesidad de un motor"], correct: 1 },
-  { q: "En un control desde dos botoneras (local y remota), ¿por qué los dos botones de PARO se conectan en serie?", a: ["Para que ninguno funcione", "Para que basta con presionar cualquiera de los dos para detener el motor (seguridad)", "Para que se necesiten los dos al mismo tiempo para parar", "Es indiferente, podrían ir en paralelo"], correct: 1 },
-  { q: "En ese mismo control desde dos botoneras, ¿por qué los botones de MARCHA se conectan en paralelo?", a: ["Para que se necesiten los dos al mismo tiempo para arrancar", "Para poder arrancar el motor desde cualquiera de las dos ubicaciones", "Porque así protegen contra sobrecarga", "Es un error, deberían ir en serie"], correct: 1 },
-  { q: "¿Qué diferencia hay entre un selector de 2 posiciones (enclavado) y un pulsador normal?", a: ["Ninguna, son el mismo componente", "El selector se queda fijo en la posición elegida; el pulsador regresa solo por resorte al soltarlo", "El selector no puede usarse en circuitos de control", "El pulsador siempre es normalmente cerrado"], correct: 1 },
-  { q: "¿Cómo regula la tensión un arrancador suave (soft starter)?", a: ["Con un devanado adicional en el motor", "Mediante tiristores (SCR) en antiparalelo por fase que rampan gradualmente el voltaje aplicado", "Cambiando la frecuencia de línea", "Con un autotransformador de derivaciones fijas"], correct: 1 },
-  { q: "¿Para qué sirve el contactor de bypass en un arrancador suave?", a: ["Para invertir el sentido de giro", "Para derivar la corriente por contactos mecánicos una vez terminada la rampa, evitando las pérdidas de conmutación de los tiristores", "Para proteger contra sobrecarga", "Para medir la velocidad del motor"], correct: 1 },
-  { q: "En un arranque secuencial de dos motores, ¿qué garantiza que el Motor 2 no pueda arrancar antes que el Motor 1?", a: ["Un temporizador en la bobina de K2", "Un contacto auxiliar NA de K1 (permiso) en serie dentro del circuito de marcha de K2", "El relé térmico del Motor 2", "No hay forma de garantizarlo eléctricamente"], correct: 1 },
-  { q: "En ese mismo arranque secuencial, ¿por qué el botón de paro (S0) es compartido entre ambos motores?", a: ["Para ahorrar cableado únicamente", "Para poder detener ambos motores de forma segura con una sola orden, sin importar cuál esté corriendo", "Porque los motores no pueden tener paros independientes", "Es un error de diseño común"], correct: 1 },
-  { q: "En un arranque estrella-triángulo reversible, ¿por qué hay que presionar el paro (S0) antes de poder invertir el sentido de giro?", a: ["No es necesario, se puede invertir en cualquier momento", "Porque KF y KR están enclavados entre sí — mientras uno esté energizado, el otro queda bloqueado por seguridad", "Porque el temporizador lo exige por norma", "Porque el motor se daña si no se detiene primero"], correct: 1 },
-  { q: "¿Qué diferencia hay entre un paro normal (S0) y un interruptor de emergencia tipo SETA?", a: ["Ninguna, cumplen la misma función", "La SETA suele ir primero en la línea, cortando TODO el circuito de control de una sola vez, con máxima prioridad; un paro normal puede ser parte de una secuencia", "La SETA es solo decorativa", "El paro normal tiene mayor prioridad que la SETA"], correct: 1 },
-  { q: "En una cinta transportadora, ¿qué pasa si un fin de carrera (límite) NC se abre mientras el motor está sellado (auto-mantenido)?", a: ["No pasa nada, el sello lo mantiene energizado", "El contactor pierde alimentación de inmediato — el sello no puede mantener energizada una bobina si se corta su propia línea de alimentación", "El motor invierte el sentido de giro", "El térmico se dispara"], correct: 1 },
-  { q: "¿Por qué un motor monofásico necesita un capacitor de arranque?", a: ["Para reducir el consumo de energía en marcha", "Porque una sola fase no produce un campo magnético rotante por sí sola; el capacitor desfasa la corriente del devanado auxiliar para dar el impulso inicial de giro", "Para proteger contra sobrecarga", "Para invertir el sentido de giro"], correct: 1 },
-  { q: "En una instalación 'bifásica' (220V entre L1 y L2, sin neutro), ¿qué diferencia hay respecto a un circuito monofásico L-N?", a: ["Ninguna, es exactamente lo mismo", "Ambos conductores son fases activas (ninguno es neutro), por lo que ambos deben protegerse/conmutarse como línea", "El bifásico no necesita protección térmica", "El bifásico siempre es trifásico en realidad"], correct: 1 },
-  { q: "¿Cuál es la diferencia principal entre un sensor inductivo y uno fotoeléctrico?", a: ["No hay ninguna diferencia real", "El inductivo detecta solo metales por campo electromagnético; el fotoeléctrico detecta cualquier objeto que interrumpa o refleje un haz de luz", "El fotoeléctrico es más lento", "El inductivo necesita contacto físico con la pieza"], correct: 1 },
-  { q: "¿Cómo se cablea típicamente un actuador (electroválvula solenoide) en un circuito de control?", a: ["En serie con el motor principal", "Igual que una carga (lámpara): entre línea y neutro, a través de un contacto que la energiza", "Solo se conecta directo a tierra", "Requiere su propio transformador siempre"], correct: 1 },
-  { q: "¿Para qué sirve una clema (bloque de conexiones) en un tablero de control?", a: ["Para conmutar circuitos de potencia", "Para empalmar y organizar cables de forma segura y desmontable, sin conmutar nada", "Para proteger contra sobrecarga", "Para medir la corriente del circuito"], correct: 1 },
+  // ---- Arranque directo / conceptos basicos ----
+  { q: "¿Para qué sirve el contacto auxiliar 13-14 de un contactor en un circuito de arranque-paro?", a: ["Para invertir el sentido de giro del motor automáticamente", "Como contacto de sello para mantener energizada la bobina al soltar el botón de marcha", "Para reducir la tensión aplicada al motor durante el arranque", "Para medir la corriente que consume el motor en marcha"], correct: 1 },
+  { q: "¿Por qué el botón de paro (S0) es normalmente cerrado (NC)?", a: ["Porque los botones NC cuestan menos que los normalmente abiertos", "Porque así encienden mejor las lámparas piloto del tablero", "Para que, si se rompe el cable, el circuito falle hacia un estado seguro (paro)", "Porque lo exige el color rojo de la carcasa del botón"], correct: 2 },
+  { q: "¿Qué pasaría si el contacto de sello (13-14) se conectara en serie con el botón de marcha en vez de en paralelo?", a: ["El motor solo funcionaría mientras se mantenga presionado el botón (no habría memoria)", "El motor arrancaría automáticamente sin necesidad de presionar nada", "El relé térmico se dispararía de inmediato al energizar la bobina", "No cambiaría nada, ambas conexiones son eléctricamente equivalentes"], correct: 0 },
+  { q: "¿Cuál es una razón real para usar un botón normalmente abierto (NA) como botón de 'marcha'?", a: ["Los botones NA duran más años que los normalmente cerrados", "Para que el motor arranque solo, sin que nadie tenga que presionarlo", "Para que el motor solo arranque cuando se da una orden activa y explícita", "Para que el relé térmico no necesite protección adicional"], correct: 2 },
+  { q: "¿Qué terminales estándar (IEC) corresponden a la bobina de un contactor?", a: ["95-96", "13-14", "A1-A2", "1-2"], correct: 2 },
+  { q: "¿Qué terminales estándar corresponden al contacto de protección (NC) de un relé térmico?", a: ["95-96", "21-22", "A1-A2", "13-14"], correct: 0 },
+  { q: "¿Qué representa la 'M 3~' dentro de un círculo en un diagrama eléctrico?", a: ["Un medidor de corriente trifásico instalado en línea", "Un motor trifásico", "Un transformador reductor de tres devanados", "Un relé térmico de tres polos"], correct: 1 },
+  { q: "¿Cuál es la función principal del guardamotor (interruptor termomagnético) antes del contactor?", a: ["Encender automáticamente el piloto verde de marcha", "Reducir la tensión de arranque aplicada al motor", "Invertir el sentido de giro cuando se detecta una falla", "Proteger contra cortocircuitos y sobrecargas, y permitir desconexión manual"], correct: 3 },
+
+  // ---- Estrella-Triangulo / autotransformador / dos velocidades ----
+  { q: "En un arranque estrella-triángulo, ¿qué contactor permanece cerrado durante todo el arranque y la marcha?", a: ["K2 (estrella)", "K3 (triángulo)", "K1 (línea)", "Ninguno — los tres alternan por turnos"], correct: 2 },
+  { q: "¿Cuál es la reducción aproximada de corriente de línea en el arranque estrella-triángulo respecto al arranque directo?", a: ["Se mantiene prácticamente igual", "A un tercio (33%) de la corriente directa", "A la mitad exacta (50%)", "Se reduce hasta un 65% de la corriente directa"], correct: 1 },
+  { q: "¿Qué función cumple el contactor K2 en el arranque estrella-triángulo?", a: ["Conecta el motor directamente a la línea de alimentación", "Alimenta exclusivamente el circuito del temporizador", "Puentea U2-V2-W2 para formar el punto estrella", "Protege el devanado contra sobrecargas térmicas"], correct: 2 },
+  { q: "¿Por qué es indispensable el enclavamiento eléctrico entre K2 y K3 en un arranque estrella-triángulo?", a: ["Para evitar que ambos cierren a la vez y provoquen un cortocircuito entre fases", "Para ahorrar algunos metros de cable adicional dentro del gabinete del tablero", "Para que las lámparas piloto enciendan siempre en la secuencia correcta", "Es solo una recomendación estética sugerida por el fabricante del contactor"], correct: 0 },
+  { q: "En el arranque por autotransformador, ¿qué hace el contactor KC ('común')?", a: ["Conecta el motor directamente a la línea sin reducción", "Cierra el punto común del autotransformador durante el arranque", "Sustituye por completo al relé térmico de protección", "Selecciona entre giro adelante y reversa"], correct: 1 },
+  { q: "¿Qué ventaja ofrece el arranque por autotransformador frente al estrella-triángulo?", a: ["Resulta más barato de instalar en absolutamente todos los casos", "Elimina por completo la necesidad de un temporizador", "Permite elegir el % de tensión de arranque mediante derivaciones (taps)", "No necesita ningún tipo de protección térmica"], correct: 2 },
+  { q: "En el circuito de fuerza del autotransformador, ¿qué contactores quedan sin corriente durante la marcha normal, ya con el motor a tensión plena?", a: ["KL y F2 permanecen siempre energizados", "Ninguno — los tres contactores quedan activos permanentemente", "KS y KC, ya que el autotransformador queda fuera de servicio", "Solo F2, el resto sigue energizado"], correct: 2 },
+  { q: "En un motor Dahlander (dos velocidades), ¿qué hace el contactor KM2 al pasar a alta velocidad?", a: ["Alimenta un devanado completamente independiente del de baja", "Puentea entre sí las terminales del devanado de baja velocidad", "Protege el motor contra sobrecargas térmicas", "Selecciona el sentido de giro del motor"], correct: 1 },
+  { q: "¿Por qué un motor de dos velocidades normalmente lleva dos relés térmicos distintos?", a: ["Es un error común de diseño que normalmente conviene evitar", "Cada velocidad consume una corriente nominal distinta y necesita su propio ajuste", "Los relés térmicos se dañan más rápido cuando se usan en estos motores", "En realidad basta con uno solo — nunca se instalan dos en la práctica"], correct: 1 },
+  { q: "¿Cuál de las siguientes técnicas NO es un método de arranque a tensión reducida?", a: ["Arranque estrella-triángulo", "Arranque por autotransformador", "Arranque directo (DOL)", "Arrancador suave (soft starter)"], correct: 2 },
+  { q: "¿Qué ventaja general tiene un arrancador a tensión reducida sobre uno directo?", a: ["Ninguna — el arranque directo siempre resulta mejor", "Reduce la corriente de arranque y el golpe mecánico sobre la instalación", "Hace que el motor gire a mayor velocidad nominal", "Elimina por completo la necesidad de protección térmica"], correct: 1 },
+
+  // ---- Inversion de giro / enclavamientos ----
+  { q: "Para invertir el sentido de giro de un motor trifásico, ¿qué se debe hacer?", a: ["Invertir dos de las tres fases de alimentación", "Invertir las tres fases al mismo tiempo", "Cambiar únicamente la tensión del circuito de control", "Agregar un temporizador adicional al circuito"], correct: 0 },
+  { q: "¿Por qué KF y KR (adelante/reversa) deben tener enclavamiento eléctrico Y mecánico?", a: ["Es solo una cuestión estética del tablero", "Porque si ambos cerraran a la vez se produciría un cortocircuito franco entre fases", "Porque así lo exige el color de los botones de mando", "En realidad basta con uno de los dos enclavamientos, nunca ambos"], correct: 1 },
+  { q: "¿Qué ocurre eléctricamente si fallan los dos contactos NC de enclavamiento y ambos contactores cierran a la vez en un arrancador reversible?", a: ["El motor simplemente gira un poco más rápido de lo normal", "No pasa nada relevante para la instalación", "Se produce un cortocircuito línea-línea a través de ambos juegos de contactos", "El motor se detiene de forma suave y controlada"], correct: 2 },
+  { q: "¿Qué es un enclavamiento mecánico entre dos contactores?", a: ["Un dispositivo físico que impide que ambas bobinas cierren sus contactos a la vez", "Un programa de software que bloquea ambas bobinas simultáneamente", "Un tipo especial de fusible de doble acción", "Un relé térmico calibrado para dos direcciones"], correct: 0 },
+  { q: "En un arranque estrella-triángulo reversible, ¿por qué hay que presionar el paro (S0) antes de poder invertir el sentido de giro?", a: ["No es necesario — se puede invertir el giro en cualquier momento", "Porque KF y KR están enclavados entre sí y uno bloquea al otro mientras esté energizado", "Porque la norma exige siempre un temporizador antes de invertir", "Porque de lo contrario el motor se dañaría físicamente de inmediato"], correct: 1 },
+
+  // ---- Sensores, temporizadores, componentes de control ----
+  { q: "¿Cuál es el propósito del relé de tiempo (KT) en el arranque estrella-triángulo?", a: ["Proteger al motor contra sobrecargas térmicas sostenidas", "Medir el tiempo que el motor permanece en estrella antes de pasar a triángulo", "Encender en secuencia las lámparas piloto del tablero", "Invertir automáticamente el sentido de giro del motor"], correct: 1 },
+  { q: "¿Qué función cumple un interruptor de límite (fin de carrera) en una máquina?", a: ["Mide continuamente la temperatura del devanado del motor", "Detecta mecánicamente que una pieza móvil llegó a una posición determinada", "Reduce la tensión aplicada durante el arranque", "Sustituye por completo al relé térmico de protección"], correct: 1 },
+  { q: "¿Para qué se usa un relé auxiliar de control (CR) en vez de aprovechar los contactos del propio contactor?", a: ["Únicamente para que el tablero se vea más complejo ante el cliente", "Cuando se necesitan más contactos auxiliares de los que trae el contactor de fábrica", "Porque los contactores comerciales no incluyen bobina propia", "No tiene ninguna utilidad práctica real en instalaciones modernas"], correct: 1 },
+  { q: "¿Cuál es la diferencia principal entre un sensor inductivo y uno fotoeléctrico?", a: ["No existe ninguna diferencia real entre ambos tipos de sensor", "El inductivo detecta solo metales; el fotoeléctrico detecta cualquier objeto que corte el haz", "El sensor fotoeléctrico siempre resulta más lento en su tiempo de respuesta", "El sensor inductivo necesita tocar físicamente la pieza que va a detectar"], correct: 1 },
+  { q: "¿Cómo se cablea típicamente un actuador (electroválvula solenoide) en un circuito de control?", a: ["Siempre en serie con el devanado principal del motor", "Igual que una carga: entre línea y neutro, a través de un contacto que la energiza", "Únicamente conectado de forma directa a tierra física", "Requiere obligatoriamente su propio transformador dedicado"], correct: 1 },
+  { q: "¿Para qué sirve una clema (bloque de conexiones) en un tablero de control?", a: ["Para conmutar y proteger circuitos completos de potencia", "Para empalmar y organizar cables de forma segura y desmontable, sin conmutar nada", "Para medir continuamente la corriente que circula por el circuito", "Para reducir la tensión que llega al circuito de control"], correct: 1 },
+  { q: "¿Qué diferencia hay entre un selector de 2 posiciones (enclavado) y un pulsador normal?", a: ["Son en la práctica el mismo componente con un nombre distinto", "El selector se queda fijo en la posición elegida; el pulsador regresa solo por resorte", "El selector nunca puede emplearse dentro de un circuito de control", "El pulsador siempre debe ser de tipo normalmente cerrado"], correct: 1 },
+  { q: "¿Qué distingue a un interruptor de emergencia tipo SETA de un paro normal (S0)?", a: ["Cumplen exactamente la misma función y son totalmente intercambiables", "La SETA va primero en la línea, corta todo con máxima prioridad y se enclava al presionarla", "La SETA es puramente decorativa y no cumple ninguna función eléctrica", "El paro normal siempre tiene mayor prioridad de corte que la SETA"], correct: 1 },
+  { q: "En una cinta transportadora, ¿qué ocurre si un fin de carrera NC se abre mientras el motor está sellado (auto-mantenido)?", a: ["El sello mantiene energizado el contactor sin importar lo que pase", "El contactor pierde alimentación de inmediato, ya que el sello depende de esa misma línea", "El motor invierte automáticamente su sentido de giro", "Se dispara el relé térmico de protección"], correct: 1 },
+
+  // ---- VFD, chopper, arrancador suave ----
+  { q: "¿Por qué un variador de frecuencia (VFD) no necesita contactores separados ni enclavamiento mecánico entre adelante y reversa?", a: ["Porque los variadores no pueden invertir el sentido de giro", "Porque el propio variador gestiona la conmutación internamente mediante software", "Porque siempre giran en un único sentido fijo de fábrica", "Porque no incorporan ningún tipo de electrónica de potencia"], correct: 1 },
+  { q: "¿Qué hace un chopper (convertidor DC-DC) en un accionamiento de motor de corriente directa?", a: ["Únicamente convierte corriente alterna a corriente directa", "Recorta un voltaje DC fijo mediante PWM para regular la velocidad", "Mide de forma continua la corriente que consume el motor", "Sustituye por completo al relé térmico de protección"], correct: 1 },
+  { q: "¿Cuál es la ventaja principal de un variador de frecuencia frente a un arranque estrella-triángulo o por autotransformador?", a: ["Resulta siempre más económico sin excepción alguna", "Permite una rampa de velocidad continua y control total en marcha, no solo al arrancar", "Elimina por completo la necesidad de cablear un circuito de fuerza", "Hace innecesaria la existencia del propio motor"], correct: 1 },
+  { q: "¿Cómo regula la tensión un arrancador suave (soft starter)?", a: ["Añadiendo un devanado adicional dentro del motor", "Mediante tiristores (SCR) en antiparalelo que rampan gradualmente el voltaje", "Cambiando la frecuencia de la línea de alimentación", "Con un autotransformador de derivaciones fijas"], correct: 1 },
+  { q: "¿Para qué sirve el contactor de bypass en un arrancador suave?", a: ["Para invertir el sentido de giro del motor una vez arrancado", "Para derivar la corriente por contactos mecánicos y evitar pérdidas en los tiristores", "Para proteger al motor contra sobrecargas térmicas sostenidas", "Para medir de forma directa la velocidad real del motor"], correct: 1 },
+
+  // ---- Multi-estacion / secuencial ----
+  { q: "En un control desde dos botoneras (local y remota), ¿por qué los dos botones de PARO se conectan en serie?", a: ["Para que ninguno de los dos botones llegue a funcionar", "Basta con presionar cualquiera de los dos para detener el motor, por seguridad", "Para que se necesiten ambos al mismo tiempo para detener el motor", "Resulta indiferente — podrían conectarse igual en paralelo"], correct: 1 },
+  { q: "En ese mismo control desde dos botoneras, ¿por qué los botones de MARCHA se conectan en paralelo?", a: ["Para que se necesiten ambos al mismo tiempo para poder arrancar", "Para poder arrancar el motor desde cualquiera de las dos ubicaciones", "Porque de esa forma protegen contra sobrecargas térmicas", "Es un error de diseño — deberían conectarse en serie"], correct: 1 },
+  { q: "En un arranque secuencial de dos motores, ¿qué garantiza que el Motor 2 no pueda arrancar antes que el Motor 1?", a: ["Un temporizador instalado directamente en la bobina de K2", "Un contacto auxiliar NA de K1 (permiso) en serie con el circuito de marcha de K2", "El relé térmico exclusivo instalado para el Motor 2", "En realidad no existe forma de garantizar esto eléctricamente"], correct: 1 },
+  { q: "En ese mismo arranque secuencial, ¿por qué el botón de paro (S0) se comparte entre ambos motores?", a: ["Únicamente para ahorrar algunos metros de cable", "Para poder detener ambos motores de forma segura con una sola orden", "Porque los motores no admiten paros independientes por norma", "Es simplemente un error de diseño frecuente"], correct: 1 },
+
+  // ---- Monofasico / bifasico / residencial ----
+  { q: "¿Por qué un motor monofásico necesita un capacitor de arranque?", a: ["Para reducir el consumo de energía durante la marcha normal", "Porque una sola fase no produce un campo magnético rotante por sí sola", "Para proteger el motor contra sobrecargas térmicas", "Para poder invertir el sentido de giro del motor"], correct: 1 },
+  { q: "En una instalación 'bifásica' (220V entre L1 y L2, sin neutro), ¿qué diferencia hay respecto a un circuito monofásico L-N?", a: ["Ninguna — ambos circuitos son exactamente iguales", "Ambos conductores son fases activas, así que los dos deben protegerse como línea", "El circuito bifásico no requiere ningún tipo de protección térmica", "Un circuito bifásico es en realidad siempre trifásico"], correct: 1 },
+  { q: "En una escalera con conmutadores de 3 vías, ¿qué ocurre con la lámpara cuando ambos interruptores están en posiciones opuestas (uno en A y el otro en B)?", a: ["La lámpara permanece encendida sin importar la posición", "La lámpara queda apagada, porque ningún camino de los dos travesaños queda cerrado", "La lámpara parpadea de forma intermitente", "Los dos interruptores se dañan al quedar en posiciones opuestas"], correct: 1 },
+  { q: "¿Qué representa el transformador de timbre (TC) en un circuito de puerta con timbre?", a: ["Un dispositivo que reduce la tensión de línea a un valor seguro para botón y chicharra", "Un contactor especial fabricado únicamente para instalaciones de timbre", "Un relé térmico especialmente adaptado para trabajar a bajo voltaje", "Un capacitor de arranque destinado al motor interno del timbre"], correct: 0 },
+  { q: "¿Cómo se logra que una lámpara exterior encienda automáticamente al anochecer?", a: ["Con un temporizador que sigue el horario del reloj del tablero", "Con una fotocelda que detecta la caída de luz natural y energiza el contactor", "Conectando la lámpara directamente sin ningún contacto intermedio", "Usando exclusivamente un interruptor de límite mecánico"], correct: 1 },
+
+  // ---- Bombeo, eficiencia, automatizacion, avanzado ----
+  { q: "En un control de bomba con dos flotadores, ¿qué función cumple el flotador de nivel ALTO (FShi, normalmente cerrado)?", a: ["Arranca la bomba cuando el tanque se vacía", "Detiene la bomba cuando el tanque se llena, cortando la alimentación del contactor", "Enciende una alarma sonora únicamente, sin afectar la bomba", "Invierte el sentido de giro de la bomba"], correct: 1 },
+  { q: "¿Para qué se instala un banco de capacitores en paralelo con una instalación con motores?", a: ["Para aumentar la velocidad nominal de los motores", "Para corregir el factor de potencia y reducir el consumo de energía reactiva", "Para sustituir la función del relé térmico", "Para invertir el sentido de giro de los motores conectados"], correct: 1 },
+  { q: "En un semáforo con temporizadores encadenados, ¿qué principio permite pasar de rojo a verde y luego a ámbar automáticamente?", a: ["Un sensor de tráfico que cuenta los vehículos que van pasando", "La salida de cada temporizador dispara la energización del siguiente en la secuencia", "Un interruptor manual que un operador debe accionar cada vez", "Las tres lámparas están cableadas todas en serie entre sí"], correct: 1 },
+  { q: "En una puerta corrediza automática reversible con fines de carrera, ¿qué detiene el motor al llegar al extremo?", a: ["El usuario debe soltar el botón exactamente en el instante correcto", "Un fin de carrera (normalmente cerrado) que corta la alimentación del contactor activo", "El relé térmico se dispara automáticamente al llegar al tope mecánico", "Nada la detiene, así que el motor sigue funcionando indefinidamente"], correct: 1 },
+  { q: "¿Qué papel juega el contacto auxiliar de 'permiso' en un sistema de banda con sensor y actuador (clasificadora)?", a: ["Ninguno — el sensor actúa siempre de forma completamente independiente", "Habilita que el motor de la banda arranque solo cuando las condiciones de seguridad están dadas", "Sustituye por completo al relé térmico de protección", "Sirve únicamente para encender la lámpara piloto de marcha"], correct: 1 },
+
+  // ---- Diagnostico y buenas practicas ----
+  { q: "Al diagnosticar un motor que arranca pero no se sella (se detiene al soltar el botón de marcha), ¿qué debe revisarse primero?", a: ["El relé térmico de protección del circuito de fuerza", "El contacto auxiliar de sello (13-14), que puede estar mal conectado o ausente", "La secuencia de fases en la caja de conexiones del motor", "El valor de la resistencia de aislamiento del devanado"], correct: 1 },
+  { q: "¿Qué medida de seguridad debe tomarse antes de medir o tocar cualquier terminal de un tablero?", a: ["Ninguna en particular, basta con tener cuidado visualmente", "Confirmar que el circuito esté desenergizado y bloqueado (procedimiento LOTO)", "Verificar solamente que las lámparas piloto estén apagadas", "Aumentar la tensión para facilitar la detección de fallas"], correct: 1 },
+  { q: "Si un arrancador estrella-triángulo pasa directo a tensión plena sin pasar por la etapa reducida, ¿qué conviene sospechar primero?", a: ["Que el motor está dañado internamente de forma irreversible", "Que los contactos instantáneo/retardado del temporizador quedaron cruzados", "Que el relé térmico está mal calibrado", "Que falta agregar más lámparas piloto al tablero"], correct: 1 },
+  { q: "Si al presionar el botón de 'adelante' el motor gira en reversa (y viceversa), ¿cuál es la causa más probable?", a: ["Un relé térmico mal calibrado en el circuito de fuerza", "Los cables de los botones de mando quedaron cruzados entre sí", "El motor tiene una falla mecánica interna irreparable", "El temporizador está ajustado a un tiempo demasiado corto"], correct: 1 },
+
+  // ---- Motores trifasicos: caja de conexiones ----
+  { q: "En la caja de conexiones de un motor trifásico, ¿qué terminales se puentean para formar la conexión en triángulo (delta)?", a: ["Se puentean U2, V2 y W2 entre sí, alimentando U1-V1-W1", "Se puentean U1-W2, V1-U2 y W1-V2 entre sí", "Se puentean U1 con V1 directamente", "No se puentea nada — se deja la caja completamente abierta"], correct: 1 },
+  { q: "¿Qué se hace en la caja de conexiones de un motor trifásico para formar la conexión en estrella?", a: ["Se puentean U1-W2, V1-U2 y W1-V2 entre sí", "Se puentean U2, V2 y W2 entre sí, y se alimenta U1-V1-W1", "Se puentea únicamente U1 con V1", "Se deja el motor completamente sin puentes"], correct: 1 },
+
+  // ---- Seguridad y Rele Maestro de Control (MCR) ----
+  { q: "En un sistema con Relé Maestro de Control (KA), ¿qué función cumplen sus contactos auxiliares hacia las 'barras seguras'?", a: ["Miden la corriente total que consumen ambos motores conectados", "Cortan la alimentación a los arrancadores aguas abajo si KA se desenergiza", "Invierten el sentido de giro de los motores conectados a la barra", "Sustituyen por completo a los relés térmicos de cada arrancador"], correct: 1 },
+  { q: "Tras presionar un paro de emergencia (E-stop) y luego liberarlo girándolo, ¿qué debería pasar con el relé maestro KA?", a: ["Debe rearmarse solo apenas se libera el E-stop", "Debe permanecer desenergizado hasta presionar de nuevo el botón de rearme", "Debe quedar energizado a media tensión mientras tanto", "Debe alternar entre energizado y desenergizado varias veces"], correct: 1 },
+  { q: "¿Por qué un E-stop se libera girando el hongo en vez de simplemente dejar de presionarlo?", a: ["Por estética del botón, no cambia nada eléctricamente", "Para impedir que se reponga por accidente y evitar un arranque inesperado", "Porque así lo exige únicamente el color rojo de su carcasa", "Para que encienda una lámpara piloto adicional al soltarlo"], correct: 1 },
+  { q: "En un tablero con dos arrancadores (K1 y K2) alimentados por una barra segura desde el relé maestro KA, ¿qué ocurre si se presiona el E-stop mientras ambos motores están en marcha?", a: ["Solo se detiene el motor cuyo botón de marcha siga presionado", "Ambos motores se detienen de inmediato, sin importar el estado de sus propios botones", "Ninguno se detiene, ya que cada arrancador tiene su propio circuito independiente", "Solo se apagan las lámparas piloto, los motores continúan girando"], correct: 1 },
+  { q: "¿Cuál es la diferencia principal entre un paro normal (S0) y un paro de emergencia (E-stop) en un tablero de control?", a: ["No existe ninguna diferencia real entre ambos tipos de botón", "El E-stop corta de golpe un grupo entero de cargas y exige rearme manual", "El paro normal siempre corta la corriente más rápido que el E-stop", "El E-stop únicamente enciende una alarma sonora en el tablero"], correct: 1 },
+  { q: "¿Qué ventaja de diseño ofrece usar un relé maestro (KA) en vez de cablear el E-stop directamente en serie dentro de cada arrancador?", a: ["Ninguna, ambos enfoques son exactamente equivalentes en la práctica", "Permite agregar o quitar arrancadores de la barra segura sin recablear el E-stop cada vez", "Elimina por completo la necesidad de relés térmicos en los arrancadores", "Hace que los motores arranquen automáticamente al energizar KA"], correct: 1 },
 ];
