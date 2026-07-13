@@ -194,6 +194,8 @@ function faceHTML(face) {
       return `<div class="f-body f-motor"><div class="f-motorbody"><span>M</span><span class="f-tilde">1~</span></div><div class="f-cap"></div><div class="f-tbox">L&nbsp;&nbsp;&nbsp;N</div></div>`;
     case "presostato":
       return `<div class="f-body f-pressure"><div class="f-gauge"><div class="f-needle"></div></div><div class="f-termrow">1&nbsp;&nbsp;2</div></div>`;
+    case "vfd-io":
+      return `<div class="f-body f-clema"><div class="f-clema-block"></div><div class="f-clema-block"></div><div class="f-clema-block"></div><div class="f-termrow">12·18·19·20·53·55</div></div>`;
     default:
       return `<div class="f-body"></div>`;
   }

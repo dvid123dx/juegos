@@ -468,6 +468,34 @@ TPL.vfd = () => ({
   },
 });
 
+// tablilla de entradas/salidas de control de un variador real: como un
+// motor, no conmuta nada por si misma — solo expone los puntos de conexion
+// tal como aparecen en el borne de control de un variador industrial (12
+// = +24V interno, 18/19 = entradas digitales, 20 = comun digital, 53 =
+// entrada analogica de referencia, 55 = comun analogico). Vive en el plano
+// de CONTROL; el mismo variador aparece con sus terminales de potencia
+// (L1-L2-L3 / U-V-W) por separado en el plano de FUERZA via TPL.vfd().
+TPL.vfdControlIO = () => {
+  const terms = {
+    12: { x: -30, y: -40 }, 18: { x: 0, y: -40 }, 19: { x: 30, y: -40 },
+    20: { x: -30, y: 20 }, 53: { x: 0, y: 20 }, 55: { x: 30, y: 20 },
+  };
+  const labels = { 12: "+24V", 18: "DI1", 19: "DI2", 20: "COM", 53: "AI1", 55: "COM" };
+  return {
+    w: 100, h: 110,
+    terminals: terms,
+    draw(g) {
+      g.appendChild(svgEl("rect", { x: -45, y: -55, width: 90, height: 90, rx: 4, class: "terminal-box", filter: "url(#fDrop)" }));
+      for (const name in terms) {
+        const p = terms[name];
+        screwAt(g, p.x, p.y, 4.6);
+        g.appendChild(text(p.x, p.y - 9, name, "sym-ref"));
+        g.appendChild(text(p.x, p.y + 15, labels[name], "sym-label-small"));
+      }
+    },
+  };
+};
+
 TPL.softstarter = () => ({
   w: 90, h: 110,
   terminals: {

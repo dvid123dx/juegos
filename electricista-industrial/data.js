@@ -2879,6 +2879,166 @@ const hoistLimitControl = {
   ],
 };
 
+/* =========================================================
+   EJERCICIO (COMBINADO, AVANZADO): Variador con Bypass y
+   Terminales de E/S Reales
+   ========================================================= */
+
+// reto de nivel 3: en vez del variador simplificado (una sola bobina
+// "marcha"/"reversa" imaginaria), aqui el variador tiene su propia tablilla
+// de entradas/salidas tal como un equipo real (entradas digitales DI1/DI2,
+// comun, entrada analogica de referencia AI1, salida de rele) Y ademas un
+// sistema de bypass con TRES contactores reales (KM1 entrada al variador,
+// KM2 salida del variador al motor, KM3 puente directo de linea al motor)
+// enclavados para que KM2 y KM3 nunca cierren a la vez — si lo hicieran,
+// la salida del variador quedaria en paralelo con la linea de alimentacion.
+const vfdBypassCombined = {
+  id: "vfd-bypass-combined",
+  group: "variador",
+  kind: "combinado",
+  combined: true,
+  level: 3,
+  title: "Variador con Bypass y Terminales de E/S Reales — Control y Fuerza Combinados",
+  brief: "Cablea un variador con su tablilla de E/S real (12=+24V, 18=DI1 marcha, 19=DI2, 20=común digital, 53=AI1 referencia, 55=común analógico) y un sistema de bypass de mantenimiento con TRES contactores: KM1 (entrada al variador), KM2 (salida del variador al motor) y KM3 (puente directo de línea al motor). SELa/SELb eligen el modo; KMA (que cierra KM1+KM2) y KMB (que cierra KM3) quedan enclavados entre sí — KM2 y KM3 JAMÁS deben cerrar juntos, o la salida del variador quedaría en paralelo con la línea.",
+  control: {
+    source: ["railL"],
+    return: ["railN"],
+    vb: [1060, 700],
+    components: [
+      railComp("railL", true, 900, "L", 520, 60),
+      railComp("railN", true, 900, "N", 520, 660),
+      C("F2", "F2 térmico", TPL.contact("NC", "95-96", "95", "96"), 240, 130),
+
+      C("KMAaux2", "KMA", TPL.contact("NO", "23-24", "23", "24"), 620, 130, { derivedFrom: "KMAcoil" }),
+      C("KMBaux2", "KMB", TPL.contact("NO", "23-24", "23", "24"), 780, 130, { derivedFrom: "KMBcoil" }),
+      C("VFDrelay", "VFD (relé E/S 04-05)", TPL.contact("NO", "04-05", "04", "05"), 940, 130, { derivedFrom: "KMAcoil" }),
+      C("H1", "H1 modo variador", TPL.lamp("H1", "green"), 620, 220),
+      C("H2", "H2 modo bypass", TPL.lamp("H2", "red"), 780, 220),
+      C("H3", "H3 en marcha", TPL.lamp("H3", "green"), 940, 220),
+
+      C("SELa", "SEL Modo VFD", TPL.wayContact("A", "modo-a", "com", "a"), 240, 220, { toggle: true, pairedWith: "SELb" }),
+      C("SELb", "SEL Modo Bypass", TPL.wayContact("B", "modo-b", "com", "b"), 400, 220, { toggle: true, pairedWith: "SELa" }),
+
+      C("S1vfd", "S1 Marcha (VFD)", TPL.button("NO", "3-4", "3", "4"), 160, 320, { manual: true }),
+      C("KMAaux1", "KMA (sello)", TPL.contact("NO", "13-14", "13", "14"), 300, 320, { derivedFrom: "KMAcoil" }),
+      C("KMBaux_i", "KMB (interlock)", TPL.contact("NC", "21-22", "21", "22"), 160, 400, { derivedFrom: "KMBcoil" }),
+      C("KMAcoil", "KMA", TPL.coil("KMA", "modo variador"), 160, 480),
+      C("KMAaux3", "KMA (permiso DI1)", TPL.contact("NO", "33-34", "33", "34"), 300, 400, { derivedFrom: "KMAcoil" }),
+
+      C("S1byp", "S1 Marcha (Bypass)", TPL.button("NO", "3-4", "3", "4"), 480, 320, { manual: true }),
+      C("KMBaux1", "KMB (sello)", TPL.contact("NO", "13-14", "13", "14"), 620, 320, { derivedFrom: "KMBcoil" }),
+      C("KMAaux_i", "KMA (interlock)", TPL.contact("NC", "21-22", "21", "22"), 480, 400, { derivedFrom: "KMAcoil" }),
+      C("KMBcoil", "KMB", TPL.coil("KMB", "bypass"), 480, 480),
+
+      C("VFDio", "Variador (E/S)", TPL.vfdControlIO(), 780, 400),
+      C("X1", "X1 clema (COM)", TPL.terminalBlock("X1", "1", "2"), 940, 340),
+      C("X2", "X2 clema (AI1)", TPL.terminalBlock("X2", "1", "2"), 940, 460),
+    ],
+    nets: [
+      ["railL", "F2.95", "KMAaux2.23", "KMBaux2.23", "VFDrelay.04"],
+      ["F2.96", "SELa.com", "SELb.com"],
+      ["SELa.a", "S1vfd.3", "KMAaux1.13"],
+      ["S1vfd.4", "KMAaux1.14", "KMBaux_i.21"],
+      ["KMBaux_i.22", "KMAcoil.A1"],
+      ["SELb.b", "S1byp.3", "KMBaux1.13"],
+      ["S1byp.4", "KMBaux1.14", "KMAaux_i.21"],
+      ["KMAaux_i.22", "KMBcoil.A1"],
+      ["KMAaux2.24", "H1.X1"],
+      ["KMBaux2.24", "H2.X1"],
+      ["VFDrelay.05", "H3.X1"],
+      ["railN", "KMAcoil.A2", "KMBcoil.A2", "H1.X2", "H2.X2", "H3.X2"],
+      ["VFDio.12", "KMAaux3.33", "X2.2"],
+      ["KMAaux3.34", "VFDio.18"],
+      ["VFDio.20", "X1.1"],
+      ["X1.2", "VFDio.55"],
+      ["VFDio.53", "X2.1"],
+    ],
+  },
+  power: {
+    vb: [820, 620],
+    components: [
+      railComp("railL1", true, 680, "L1", 400, 50),
+      railComp("railL2", true, 680, "L2", 400, 90),
+      railComp("railL3", true, 680, "L3", 400, 130),
+
+      C("KM1a", "KM1", TPL.pole("1-2", "1", "2"), 140, 220, { closedWhen: "KMAcoil" }),
+      C("KM1b", "KM1", TPL.pole("3-4", "3", "4"), 220, 220, { closedWhen: "KMAcoil" }),
+      C("KM1c", "KM1", TPL.pole("5-6", "5", "6"), 300, 220, { closedWhen: "KMAcoil" }),
+      C("KM3a", "KM3", TPL.pole("1-2", "1", "2"), 460, 220, { closedWhen: "KMBcoil" }),
+      C("KM3b", "KM3", TPL.pole("3-4", "3", "4"), 540, 220, { closedWhen: "KMBcoil" }),
+      C("KM3c", "KM3", TPL.pole("5-6", "5", "6"), 620, 220, { closedWhen: "KMBcoil" }),
+
+      C("VFD", "Variador", TPL.vfd(), 220, 340, { runWhen: "KMAcoil" }),
+
+      C("KM2a", "KM2", TPL.pole("1-2", "1", "2"), 140, 460, { closedWhen: "KMAcoil" }),
+      C("KM2b", "KM2", TPL.pole("3-4", "3", "4"), 220, 460, { closedWhen: "KMAcoil" }),
+      C("KM2c", "KM2", TPL.pole("5-6", "5", "6"), 300, 460, { closedWhen: "KMAcoil" }),
+
+      C("M", "Motor", TPL.motor(true), 380, 560, { runWhen: ["KMAcoil", "KMBcoil"] }),
+    ],
+    nets: [
+      ["railL1", "KM1a.1", "KM3a.1"],
+      ["railL2", "KM1b.3", "KM3b.3"],
+      ["railL3", "KM1c.5", "KM3c.5"],
+      ["KM1a.2", "VFD.L1"],
+      ["KM1b.4", "VFD.L2"],
+      ["KM1c.6", "VFD.L3"],
+      ["VFD.U", "KM2a.1"],
+      ["VFD.V", "KM2b.3"],
+      ["VFD.W", "KM2c.5"],
+      ["KM2a.2", "KM3a.2", "M.U1"],
+      ["KM2b.4", "KM3b.4", "M.V1"],
+      ["KM2c.6", "KM3c.6", "M.W1"],
+    ],
+  },
+  simulation: [
+    cLogStep("El sistema arranca en modo VFD (SELa cerrado por defecto, bypass desactivado)."),
+    cLogStep("Presionas S1vfd (marcha en modo variador)..."),
+    cActStep((dc, dp) => {
+      dc.setClosed("S1vfd", true);
+      dc.setEnergized("KMAcoil", true);
+      dc.setClosed("KMAaux1", true);
+      dc.setClosed("KMAaux2", true);
+      dc.setClosed("KMAaux3", true);
+      dc.setClosed("VFDrelay", true);
+      dc.setEnergized("H1", true);
+      dc.setEnergized("H3", true);
+      dp.setClosed("KM1a", true); dp.setClosed("KM1b", true); dp.setClosed("KM1c", true);
+      dp.setClosed("KM2a", true); dp.setClosed("KM2b", true); dp.setClosed("KM2c", true);
+      dp.setRunning("VFD", true);
+      dp.setRunning("M", true);
+    }, "KMA se energiza y cierra KM1 (entrada) y KM2 (salida): el variador recibe línea, la señal DI1 le da la orden de marcha, y el motor gira controlado por el variador.", 1100),
+    cActStep((dc) => { dc.setClosed("S1vfd", false); }, "Sueltas S1vfd — KMA se mantiene sellado.", 800),
+    cLogStep("Por mantenimiento, cambias el selector a modo Bypass (SELa abre, SELb cierra)..."),
+    cActStep((dc, dp) => {
+      dc.setClosed("SELa", false);
+      dc.setClosed("SELb", true);
+      dc.setEnergized("KMAcoil", false);
+      dc.setClosed("KMAaux1", false);
+      dc.setClosed("KMAaux2", false);
+      dc.setClosed("KMAaux3", false);
+      dc.setClosed("VFDrelay", false);
+      dc.setEnergized("H1", false);
+      dc.setEnergized("H3", false);
+      dp.setClosed("KM1a", false); dp.setClosed("KM1b", false); dp.setClosed("KM1c", false);
+      dp.setClosed("KM2a", false); dp.setClosed("KM2b", false); dp.setClosed("KM2c", false);
+      dp.setRunning("VFD", false);
+      dp.setRunning("M", false);
+    }, "Como la ruta de KMA pasaba por SELa, al abrirse KMA se desenergiza de inmediato: el variador se detiene solo. Ahora hay que arrancar el bypass a mano.", 1300),
+    cLogStep("Presionas S1byp (marcha en modo bypass)..."),
+    cActStep((dc, dp) => {
+      dc.setClosed("S1byp", true);
+      dc.setEnergized("KMBcoil", true);
+      dc.setClosed("KMBaux1", true);
+      dc.setClosed("KMBaux2", true);
+      dc.setEnergized("H2", true);
+      dp.setClosed("KM3a", true); dp.setClosed("KM3b", true); dp.setClosed("KM3c", true);
+      dp.setRunning("M", true);
+    }, "KMB se energiza y cierra KM3: el motor gira directo de la línea, sin pasar por el variador — así se sigue operando aunque el variador esté fuera de servicio.", 1100),
+    cActStep((dc) => { dc.setClosed("S1byp", false); }, "Sueltas S1byp — KMB se mantiene sellado. Nota cómo KM2 (variador) y KM3 (bypass) nunca estuvieron cerrados a la vez.", 900),
+  ],
+};
+
 const EXERCISES = [
   dolControl, dolPower, revControl, ydControl, ydPower, autoControl, autoPower,
   twoSpeedControl, twoSpeedPower, alarmControl,
@@ -2891,6 +3051,7 @@ const EXERCISES = [
   slidingDoorCombined, estopMcrControl, compressorControl, photoSorterControl,
   hvacFanControl, sumpPumpControl, airlockInterlockControl, atsControl,
   pullCordChainControl, antiCondensationHeaterControl, hoistLimitControl,
+  vfdBypassCombined,
 ];
 
 /* =========================================================
@@ -3123,6 +3284,12 @@ const EXPLORER = [
     notes: "Si el equipo nunca se detiene, sospecha primero de un presostato descalibrado o de un contacto NA usado por error en vez de NC.",
     face: "presostato",
   },
+  {
+    id: "vfd-io", name: "Tablilla de E/S de un Variador Real", tag: "12 / 18 / 19 / 20 / 53 / 55",
+    desc: "Además de sus terminales de potencia (L1-L2-L3 / U-V-W), todo variador industrial trae una tablilla de control de bajo voltaje: entradas digitales (DI1, DI2) para marcha/dirección, un común digital, una entrada analógica (AI1) para referencia de velocidad, su propio común analógico, y un terminal de +24V que el propio variador genera para alimentar esas señales.",
+    notes: "Es común puentear el común digital (COM) con el común analógico (AI COM) cuando ambos comparten la misma referencia de tierra — revisa el manual del fabricante antes de asumirlo.",
+    face: "vfd-io",
+  },
 ];
 
 /* =========================================================
@@ -3342,4 +3509,14 @@ const QUIZ = [
   { q: "Comparado con un arranque directo, ¿qué sacrifica un arranque estrella-triángulo a cambio de reducir la corriente?", a: ["Par de arranque disponible: se reduce aproximadamente al mismo tercio que la corriente", "Nada, mantiene exactamente el mismo par de arranque que el directo", "La velocidad nominal final del motor una vez a tensión plena", "El sentido de giro del motor durante la etapa de arranque"], correct: 0 },
   { q: "¿En qué se parecen, en su objetivo, un arrancador suave (soft starter) y un autotransformador de arranque?", a: ["Ambos buscan reducir la corriente y el golpe mecánico del arranque directo", "Ambos regulan la velocidad del motor de forma continua en marcha", "Ambos eliminan por completo la necesidad de protección térmica", "Ambos requieren invertir dos fases para funcionar correctamente"], correct: 0 },
   { q: "¿Cuál es una limitación importante de un VFD que NO tienen el estrella-triángulo ni el autotransformador?", a: ["Puede introducir armónicos y requerir compatibilidad electromagnética", "El VFD nunca reduce la corriente de arranque del motor", "El VFD no puede usarse jamás con motores trifásicos estándar", "El VFD siempre resulta más económico en cualquier escenario"], correct: 0 },
+
+  // ---- Terminales reales de un variador y sistemas de bypass ----
+  { q: "En la tablilla de control de un variador real, ¿qué señal se conecta típicamente a la entrada digital DI1?", a: ["La orden de marcha/paro del variador", "La alimentación trifásica de potencia del motor", "La salida de frecuencia hacia el motor", "La tierra física de todo el gabinete"], correct: 0 },
+  { q: "¿Qué representa el terminal 53 (AI1) en un variador de frecuencia?", a: ["Una entrada analógica, típicamente la referencia de velocidad deseada", "Un contacto de relé para señalizar 'variador en falla'", "El terminal de tierra del blindaje de los cables de potencia", "Una segunda entrada digital para el sentido de giro"], correct: 0 },
+  { q: "¿Por qué un variador entrega su propio terminal de +24V (por ejemplo el 12) en la tablilla de control?", a: ["Para alimentar sus propias entradas digitales/analógicas sin fuente externa", "Porque así arranca el motor sin necesidad de ningún contactor", "Es el terminal por donde entra la energía trifásica de línea", "Sustituye por completo la necesidad de un transformador de control"], correct: 0 },
+  { q: "¿Qué representan los terminales 20 (COM digital) y 55 (COM analógico) de un variador?", a: ["Los comunes de referencia de las señales digitales y analógicas, respectivamente", "Dos entradas digitales adicionales para marcha y paro", "Los terminales de potencia trifásica de salida al motor", "Un contacto de relé exclusivo para indicar sobretemperatura"], correct: 0 },
+  { q: "¿Cuál es el propósito de un sistema de 'bypass' en una instalación con variador de frecuencia?", a: ["Permitir operar el motor directo de línea si el variador falla o está en mantenimiento", "Aumentar permanentemente la velocidad máxima del motor", "Eliminar la necesidad de cualquier guardamotor o térmico", "Reducir el costo de instalación eliminando el variador por completo"], correct: 0 },
+  { q: "En un bypass con KM1 (entrada al variador), KM2 (salida del variador al motor) y KM3 (puente directo), ¿qué par de contactores NUNCA debe cerrar a la vez?", a: ["KM2 y KM3", "KM1 y KM2", "KM1 y KM3", "Los tres pueden cerrar juntos sin ningún problema"], correct: 0 },
+  { q: "¿Qué pasaría si KM2 (salida del variador) y KM3 (bypass) cerraran al mismo tiempo?", a: ["La salida del variador quedaría en paralelo con la línea, una falla grave", "El motor simplemente giraría el doble de rápido de lo normal en ese instante", "No pasaría nada relevante, es una condición perfectamente segura", "El variador aumentaría automáticamente su frecuencia de salida real"], correct: 0 },
+  { q: "En un sistema de bypass, ¿por qué cambiar el selector de modo mientras el variador está en marcha suele desenergizar el contactor de esa rama?", a: ["Porque la ruta de sello del contactor pasa por el propio selector de modo", "Porque el selector de modo siempre corta la alimentación general del tablero", "Porque el variador se apaga automáticamente al detectar cualquier selector", "No debería pasar nada — es un comportamiento indeseado y anómalo"], correct: 0 },
 ];
