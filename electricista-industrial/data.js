@@ -2290,6 +2290,110 @@ const estopMcrControl = {
   ],
 };
 
+/* =========================================================
+   EJERCICIO: Control de Compresor con Presostato — CONTROL
+   ========================================================= */
+
+const compressorControl = {
+  id: "compressor-control",
+  level: 1,
+  group: "neumatica",
+  kind: "control",
+  title: "Control de Compresor con Presostato — Circuito de Control",
+  brief: "Cablea el guardamotor Q1, el térmico F2 y el presostato PS1 (normalmente cerrado: cierra cuando la presión del tanque baja del mínimo). PS1 alimenta directamente la bobina de K1 — sin botón ni sello, porque el propio presostato hace de interruptor automático. Agrega el piloto H1 ('compresor en marcha') a través del auxiliar K1aux1.",
+  vb: [560, 560],
+  source: ["railL"],
+  return: ["railN"],
+  components: [
+    railComp("railL", true, 420, "L", 300, 60),
+    railComp("railN", true, 420, "N", 300, 500),
+    C("Q1", "Q1 Guardamotor", TPL.breaker("Q1", "1", "2"), 220, 130, { toggle: true }),
+    C("F2", "F2 térmico", TPL.contact("NC", "95-96", "95", "96"), 220, 210),
+    C("K1aux1", "K1", TPL.contact("NO", "13-14", "13", "14"), 340, 210, { derivedFrom: "K1coil" }),
+    C("PS1", "PS1 Presostato", TPL.pressureSwitch("NC", "1-2", "1", "2"), 220, 300, { manual: true }),
+    C("K1coil", "K1", TPL.coil("K1", "compresor"), 220, 400),
+    C("H1", "H1 en marcha", TPL.lamp("H1", "green"), 340, 300),
+  ],
+  nets: [
+    ["railL", "Q1.1"],
+    ["Q1.2", "F2.95", "K1aux1.13"],
+    ["F2.96", "PS1.1"],
+    ["PS1.2", "K1coil.A1"],
+    ["K1aux1.14", "H1.X1"],
+    ["railN", "K1coil.A2", "H1.X2"],
+  ],
+  simulation: [
+    logStep("El tanque está por debajo de la presión mínima: PS1 permanece cerrado (NC) en reposo."),
+    actStep((d) => {
+      d.setEnergized("K1coil", true);
+      d.setClosed("K1aux1", true);
+      d.setEnergized("H1", true);
+    }, "K1 se energiza a través de PS1: el compresor arranca solo, sin intervención manual.", 900),
+    logStep("La presión del tanque sube hasta el punto de corte de PS1..."),
+    actStep((d) => {
+      d.setClosed("PS1", false);
+      d.setEnergized("K1coil", false);
+      d.setClosed("K1aux1", false);
+      d.setEnergized("H1", false);
+    }, "PS1 abre al alcanzar la presión máxima: el compresor se detiene automáticamente.", 1000),
+    logStep("El consumo de aire hace bajar la presión de nuevo..."),
+    actStep((d) => {
+      d.setClosed("PS1", true);
+      d.setEnergized("K1coil", true);
+      d.setClosed("K1aux1", true);
+      d.setEnergized("H1", true);
+    }, "PS1 vuelve a cerrar: el compresor arranca otra vez sin que nadie presione ningún botón.", 1000),
+  ],
+};
+
+/* =========================================================
+   EJERCICIO: Clasificador con Sensor Fotoeléctrico — CONTROL
+   ========================================================= */
+
+const photoSorterControl = {
+  id: "photo-sorter-control",
+  level: 1,
+  group: "sensores",
+  kind: "control",
+  title: "Clasificador con Sensor Fotoeléctrico — Circuito de Control",
+  brief: "Cablea el selector SEL (0=apagado, 1=habilitado) que pasa por la clema X1 hasta el sensor fotoeléctrico PE1 (normalmente abierto: cierra cuando una pieza interrumpe el haz de luz). PE1 acciona directamente la electroválvula YV1 (empujador neumático) y el piloto H1, mientras dure la interrupción del haz.",
+  vb: [560, 460],
+  source: ["railL"],
+  return: ["railN"],
+  components: [
+    railComp("railL", true, 420, "L", 300, 60),
+    railComp("railN", true, 420, "N", 300, 400),
+    C("SEL", "SEL Habilitar", TPL.selector("0-1", "0", "1"), 220, 140, { toggle: true }),
+    C("X1", "X1 clema", TPL.terminalBlock("X1", "1", "2"), 220, 220),
+    C("PE1", "PE1 fotoeléctrico", TPL.photoSensor("NO", "1-2", "1", "2"), 220, 300, { manual: true }),
+    C("YV1", "YV1 empujador", TPL.actuator("YV1"), 380, 220),
+    C("H1", "H1 detectado", TPL.lamp("H1", "green"), 380, 320),
+  ],
+  nets: [
+    ["railL", "SEL.0"],
+    ["SEL.1", "X1.1"],
+    ["X1.2", "PE1.1"],
+    ["PE1.2", "YV1.X1", "H1.X1"],
+    ["railN", "YV1.X2", "H1.X2"],
+  ],
+  simulation: [
+    logStep("SEL está en 0 (apagado): aunque pase una pieza frente a PE1, no pasa nada."),
+    logStep("Pones SEL en 1 (habilitado)..."),
+    actStep((d) => { d.setClosed("SEL", true); }, null, 600),
+    logStep("Una pieza interrumpe el haz de luz de PE1..."),
+    actStep((d) => {
+      d.setClosed("PE1", true);
+      d.setEnergized("YV1", true);
+      d.setEnergized("H1", true);
+    }, "PE1 cierra: YV1 empuja la pieza fuera de la banda y H1 enciende, mientras dure la interrupción del haz.", 1000),
+    actStep((d) => {
+      d.setClosed("PE1", false);
+      d.setEnergized("YV1", false);
+      d.setEnergized("H1", false);
+    }, "La pieza sigue su curso y libera el haz: PE1 abre, YV1 se retrae y H1 se apaga — listo para la siguiente pieza.", 1000),
+  ],
+};
+
 const EXERCISES = [
   dolControl, dolPower, revControl, ydControl, ydPower, autoControl, autoPower,
   twoSpeedControl, twoSpeedPower, alarmControl,
@@ -2299,7 +2403,7 @@ const EXERCISES = [
   singlePhaseMotorCombined, twoPhaseHeaterCombined, sensorActuatorCombined,
   staircaseSwitches, doorbellCircuit, photocellLighting, humidityFanCombined,
   dualFloatPumpCombined, capacitorBankCombined, trafficLightSequencer,
-  slidingDoorCombined, estopMcrControl,
+  slidingDoorCombined, estopMcrControl, compressorControl, photoSorterControl,
 ];
 
 /* =========================================================
@@ -2499,6 +2603,11 @@ const EXPLORER = [
     desc: "Motor de una sola fase para cargas residenciales y comerciales pequeñas. El capacitor de arranque genera un campo desfasado que le da al rotor el impulso inicial de giro, ya que una sola fase no produce un campo rotante por sí sola.",
     face: "motor-monofasico",
   },
+  {
+    id: "presostato", name: "Presostato (Interruptor de Presión)", tag: "1-2 (NA/NC)",
+    desc: "Detecta la presión de un tanque o línea neumática/hidráulica y conmuta sus contactos al llegar al punto de corte ajustado. En compresores, su contacto NC alimenta directamente la bobina del contactor: no necesita botón ni sello, arranca y para el equipo solo.",
+    face: "presostato",
+  },
 ];
 
 /* =========================================================
@@ -2591,4 +2700,11 @@ const QUIZ = [
   { q: "En un tablero con dos arrancadores (K1 y K2) alimentados por una barra segura desde el relé maestro KA, ¿qué ocurre si se presiona el E-stop mientras ambos motores están en marcha?", a: ["Solo se detiene el motor cuyo botón de marcha siga presionado", "Ambos motores se detienen de inmediato, sin importar el estado de sus propios botones", "Ninguno se detiene, ya que cada arrancador tiene su propio circuito independiente", "Solo se apagan las lámparas piloto, los motores continúan girando"], correct: 1 },
   { q: "¿Cuál es la diferencia principal entre un paro normal (S0) y un paro de emergencia (E-stop) en un tablero de control?", a: ["No existe ninguna diferencia real entre ambos tipos de botón", "El E-stop corta de golpe un grupo entero de cargas y exige rearme manual", "El paro normal siempre corta la corriente más rápido que el E-stop", "El E-stop únicamente enciende una alarma sonora en el tablero"], correct: 1 },
   { q: "¿Qué ventaja de diseño ofrece usar un relé maestro (KA) en vez de cablear el E-stop directamente en serie dentro de cada arrancador?", a: ["Ninguna, ambos enfoques son exactamente equivalentes en la práctica", "Permite agregar o quitar arrancadores de la barra segura sin recablear el E-stop cada vez", "Elimina por completo la necesidad de relés térmicos en los arrancadores", "Hace que los motores arranquen automáticamente al energizar KA"], correct: 1 },
+
+  // ---- Presostatos, sensores fotoelectricos y clasificacion ----
+  { q: "En un control de compresor con presostato, ¿por qué el presostato alimenta la bobina del contactor directamente, sin botón de marcha ni contacto de sello?", a: ["Porque el presostato mismo hace las veces de interruptor automático según la presión", "Porque los compresores nunca necesitan botón de marcha por norma", "Porque el sello eléctrico dañaría el diafragma interno del presostato", "Porque así lo exige siempre el fabricante del contactor, sin razón técnica"], correct: 0 },
+  { q: "¿Qué contacto de presostato conviene usar para que el compresor arranque cuando la presión del tanque está baja?", a: ["Un contacto normalmente abierto (NA), que cierra a baja presión", "Un contacto normalmente cerrado (NC), que permanece cerrado a baja presión", "Cualquiera de los dos, el tipo de contacto no influye en el resultado", "Un contacto de tiempo retardado a la desenergización"], correct: 1 },
+  { q: "¿En qué se diferencia un sensor fotoeléctrico de tipo 'barrera' (through-beam) de uno inductivo?", a: ["Detecta la interrupción de un haz de luz, no solo piezas metálicas", "El fotoeléctrico solamente puede detectar piezas metálicas grandes", "El inductivo siempre necesita dos cables adicionales de repuesto", "No hay ninguna diferencia real de funcionamiento entre ambos"], correct: 0 },
+  { q: "En un clasificador con sensor fotoeléctrico y electroválvula, ¿qué función cumple el selector SEL en 'modo 0'?", a: ["Acelera el paso de piezas frente al sensor fotoeléctrico", "Corta la alimentación de todo el circuito de clasificación", "Invierte la lógica de la electroválvula de empuje", "Enciende una alarma sonora adicional en el tablero"], correct: 1 },
+  { q: "¿Qué representa la clema (bloque de conexiones) en un diagrama de control?", a: ["Un punto de unión entre dos cables, sin conmutar nada", "Un tipo especial de contactor auxiliar de mando", "Un relé de tiempo con retardo ajustable", "Un fusible de protección contra sobrecorrientes"], correct: 0 },
 ];

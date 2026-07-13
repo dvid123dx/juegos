@@ -148,6 +148,10 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .f-actuador { background: #1c2740; width: 85%; height: 85%; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
 .f-act-piston { width: 16px; height: 56px; border-radius: 3px; background: linear-gradient(180deg, #c7d0e6, #7f93b8); }
 
+.f-pressure { background: #1c2740; width: 85%; height: 85%; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+.f-gauge { width: 46px; height: 46px; border-radius: 50%; background: linear-gradient(180deg, #aebbdf, #5f6c8f); position: relative; }
+.f-needle { position: absolute; top: 23px; left: 23px; width: 16px; height: 2px; background: #ff4d4d; transform-origin: 0 50%; transform: rotate(-40deg); }
+
 .f-cap { width: 12px; height: 22px; border-radius: 3px; background: #2a3350; border: 1px solid #0d1526; position: absolute; margin-top: -70px; margin-left: 40px; }
 
 .f-lamp { background: #1c2740; width: 85%; height: 85%; border-radius: 10px; }
@@ -496,6 +500,13 @@ main#app { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .float-rod { stroke: #7a8bb0; stroke-width: 2; }
 .float-ball { fill: #3a7fc9; stroke: #1a2338; stroke-width: 0.8; transition: fill 0.15s; }
 .component.closed .float-ball { fill: #43ff8f; }
+
+/* presostato: caratula tipo manometro con aguja */
+.pressure-gauge { fill: url(#gBezel); stroke: #4a5266; stroke-width: 0.8; }
+.pressure-tick { stroke: #4a5266; stroke-width: 0.8; }
+.pressure-needle { stroke: #ff4d4d; stroke-width: 1.6; stroke-linecap: round; transition: stroke 0.15s; }
+.pressure-hub { fill: #0a1120; }
+.component.closed .pressure-needle { stroke: #43ff8f; }
 
 /* transformador de control (TC) */
 .tc-body { fill: url(#gShell); stroke: #0d1526; stroke-width: 1; }

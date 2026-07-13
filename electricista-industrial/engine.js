@@ -754,6 +754,32 @@ TPL.floatSwitch = (kind, ref, t1, t2) => ({
   },
 });
 
+TPL.pressureSwitch = (kind, ref, t1, t2) => ({
+  // presostato: censa la presion de un tanque/linea neumatica o hidraulica
+  // (aire, agua) — se opera manualmente para simular que la presion sube
+  // o baja hasta su punto de corte
+  w: 34, h: 48,
+  gate: true,
+  btnKind: kind,
+  terminals: { [t1]: { x: 0, y: -24 }, [t2]: { x: 0, y: 24 } },
+  restClosed: kind === "NC",
+  draw(g) {
+    contactGap(g, kind, -24, 24);
+    g.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 10, class: "pressure-gauge btn-pressable" }));
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      g.appendChild(svgEl("line", {
+        x1: Math.cos(a) * 7.5, y1: Math.sin(a) * 7.5,
+        x2: Math.cos(a) * 9, y2: Math.sin(a) * 9,
+        class: "pressure-tick",
+      }));
+    }
+    g.appendChild(svgEl("line", { x1: 0, y1: 0, x2: 5, y2: -6, class: "pressure-needle" }));
+    g.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 1.6, class: "pressure-hub" }));
+    g.appendChild(text(20, -14, ref, "sym-ref", "start"));
+  },
+});
+
 TPL.controlTransformer = (ref, tin, tout) => ({
   // transformador de control (TC): reduce la tension de linea a una
   // tension segura de mando. Aqui se modela como paso directo siempre

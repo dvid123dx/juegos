@@ -32,6 +32,8 @@ const GROUP_LABELS = {
   eficiencia: "Eficiencia Energética",
   automatizacion: "Automatización y Secuencias",
   seguridad: "Seguridad y Relé Maestro (MCR)",
+  neumatica: "Sistemas Neumáticos",
+  sensores: "Sensores y Clasificación",
 };
 
 const LEVEL_LABELS = {
@@ -138,6 +140,8 @@ function faceHTML(face) {
       return `<div class="f-body f-actuador"><div class="f-act-piston"></div><div class="f-termrow">X1&nbsp;&nbsp;X2</div></div>`;
     case "motor-monofasico":
       return `<div class="f-body f-motor"><div class="f-motorbody"><span>M</span><span class="f-tilde">1~</span></div><div class="f-cap"></div><div class="f-tbox">L&nbsp;&nbsp;&nbsp;N</div></div>`;
+    case "presostato":
+      return `<div class="f-body f-pressure"><div class="f-gauge"><div class="f-needle"></div></div><div class="f-termrow">1&nbsp;&nbsp;2</div></div>`;
     default:
       return `<div class="f-body"></div>`;
   }
@@ -779,6 +783,7 @@ const FREE_PALETTE = [
   { key: "sensorFoto", label: "Sensor fotoeléctrico", make: (n) => ({ prefix: "PE", tpl: () => TPL.photoSensor("NO", "1-2", "1", "2"), manual: true }) },
   { key: "floatSw", label: "Interruptor de flotador", make: (n) => ({ prefix: "FS", tpl: () => TPL.floatSwitch("NO", "3-4", "3", "4"), manual: true }) },
   { key: "photocell", label: "Fotocelda crepuscular", make: (n) => ({ prefix: "PC", tpl: () => TPL.photocell("NO", "1-2", "1", "2"), manual: true }) },
+  { key: "pressureSw", label: "Presostato", make: (n) => ({ prefix: "PS", tpl: () => TPL.pressureSwitch("NC", "1-2", "1", "2"), manual: true }) },
   { key: "actuator", label: "Actuador / electroválvula", make: (n) => ({ prefix: "YV", tpl: () => TPL.actuator("YV" + n) }) },
   { key: "tc", label: "Transformador de control (TC)", make: (n) => ({ prefix: "TC", tpl: () => TPL.controlTransformer("TC" + n, "in", "out") }) },
   { key: "capbank", label: "Banco de capacitores", make: (n) => ({ prefix: "CB", tpl: () => TPL.capacitorBank("CB" + n) }) },
