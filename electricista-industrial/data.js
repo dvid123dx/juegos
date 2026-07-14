@@ -2586,15 +2586,14 @@ const atsControl = {
   group: "respaldo",
   kind: "control",
   title: "Transferencia Automática de Emergencia (ATS) — Circuito de Control",
-  brief: "Cablea una transferencia automática (ATS) simplificada: SELa/SELb son las dos mitades de un solo interruptor que simula el sensor de presencia de la red normal (SELa cerrado = hay red; SELb cerrado = falló la red). Si falla, el temporizador KT retarda el arranque del generador antes de que KE cierre; KNaux_i y KEaux_i se enclavan entre sí para que jamás ambas fuentes alimenten la carga a la vez. H1/H2 indican qué fuente está en línea.",
+  brief: "Cablea una transferencia automática (ATS) simplificada: SEL es un conmutador de 3 terminales REAL que simula el sensor de presencia de la red normal — en reposo (vía A) indica que hay red; conmutado (vía B) indica que la red falló. Si falla, el temporizador KT retarda el arranque del generador antes de que KE cierre; KNaux_i y KEaux_i se enclavan entre sí para que jamás ambas fuentes alimenten la carga a la vez. H1/H2 indican qué fuente está en línea.",
   vb: [620, 500],
   source: ["railL"],
   return: ["railN"],
   components: [
     railComp("railL", true, 480, "L", 340, 60),
     railComp("railN", true, 480, "N", 340, 440),
-    C("SELa", "SELa red normal", TPL.wayContact("A", "com-a", "com", "a"), 180, 140, { toggle: true, pairedWith: "SELb" }),
-    C("SELb", "SELb red falló", TPL.wayContact("B", "com-b", "com", "b"), 340, 140, { toggle: true, pairedWith: "SELa" }),
+    C("SEL", "SEL red normal/falló", TPL.threeWaySwitch("SEL", "com", "a", "b"), 260, 150, { toggle: true }),
     C("KNaux_i", "KN (interlock)", TPL.contact("NC", "21-22", "21", "22"), 180, 220, { derivedFrom: "KEcoil" }),
     C("KNcoil", "KN", TPL.coil("KN", "red normal"), 180, 320),
     C("KTcoil", "KT", TPL.coil("KT", "arranque gen."), 340, 220),
@@ -2607,10 +2606,10 @@ const atsControl = {
     C("H2", "H2 generador", TPL.lamp("H2", "red"), 560, 380),
   ],
   nets: [
-    ["railL", "SELa.com", "SELb.com", "KNaux2.13", "KEaux2.13"],
-    ["SELa.a", "KNaux_i.21"],
+    ["railL", "SEL.com", "KNaux2.13", "KEaux2.13"],
+    ["SEL.a", "KNaux_i.21"],
     ["KNaux_i.22", "KNcoil.A1"],
-    ["SELb.b", "KTcoil.A1", "KTno.15"],
+    ["SEL.b", "KTcoil.A1", "KTno.15"],
     ["KTno.18", "KEaux_i.21"],
     ["KEaux_i.22", "KEcoil.A1"],
     ["KNaux2.14", "H1.X1"],
@@ -2618,7 +2617,7 @@ const atsControl = {
     ["railN", "KNcoil.A2", "KEcoil.A2", "KTcoil.A2", "H1.X2", "H2.X2"],
   ],
   simulation: [
-    logStep("La red eléctrica normal está presente: SELa cerrado, SELb abierto."),
+    logStep("La red eléctrica normal está presente: SEL en reposo (vía A)."),
     actStep((d) => {
       d.setEnergized("KNcoil", true);
       d.setClosed("KNaux2", true);
@@ -2626,13 +2625,12 @@ const atsControl = {
     }, "KN está energizado de inmediato: la carga se alimenta de la red normal.", 900),
     logStep("Falla la red eléctrica (apagón)..."),
     actStep((d) => {
-      d.setClosed("SELa", false);
-      d.setClosed("SELb", true);
+      d.setClosed("SEL", true);
       d.setEnergized("KNcoil", false);
       d.setClosed("KNaux2", false);
       d.setEnergized("H1", false);
       d.setEnergized("KTcoil", true);
-    }, "SELa abre y SELb cierra: KN se desenergiza y KT inicia la cuenta para arrancar el generador.", 1100),
+    }, "SEL conmuta a la vía B: el común salta de A a B (nunca las dos a la vez). KN se desenergiza y KT inicia la cuenta para arrancar el generador.", 1100),
     logStep("Después del retardo, KT cierra su contacto 15-18..."),
     actStep((d) => {
       d.setClosed("KTno", true);
@@ -2642,8 +2640,7 @@ const atsControl = {
     }, "KE se energiza: la carga se transfiere al generador. El enclavamiento impide que KN pudiera cerrar al mismo tiempo.", 1100),
     logStep("La red eléctrica se restablece..."),
     actStep((d) => {
-      d.setClosed("SELa", true);
-      d.setClosed("SELb", false);
+      d.setClosed("SEL", false);
       d.setEnergized("KTcoil", false);
       d.setClosed("KTno", false);
       d.setEnergized("KEcoil", false);
@@ -2652,7 +2649,7 @@ const atsControl = {
       d.setEnergized("KNcoil", true);
       d.setClosed("KNaux2", true);
       d.setEnergized("H1", true);
-    }, "SELa vuelve a cerrar: la carga regresa a la red normal y KE se desenergiza — nunca ambas fuentes alimentan la carga a la vez.", 1200),
+    }, "SEL vuelve a la vía A: la carga regresa a la red normal y KE se desenergiza — nunca ambas fuentes alimentan la carga a la vez.", 1200),
   ],
 };
 
@@ -2895,7 +2892,7 @@ const vfdBypassCombined = {
   combined: true,
   level: 3,
   title: "Variador con Bypass y Terminales de E/S Reales — Control y Fuerza Combinados",
-  brief: "Cablea un variador con su tablilla de E/S real (12=+24V, 18=DI1 marcha, 19=DI2, 20=común digital, 53=AI1 referencia, 55=común analógico) y un sistema de bypass de mantenimiento con TRES contactores: KM1 (entrada al variador), KM2 (salida del variador al motor) y KM3 (puente directo de línea al motor). SELa/SELb eligen el modo; KMA (que cierra KM1+KM2) y KMB (que cierra KM3) quedan enclavados entre sí — KM2 y KM3 JAMÁS deben cerrar juntos, o la salida del variador quedaría en paralelo con la línea.",
+  brief: "Cablea un variador con su tablilla de E/S real (12=+24V, 18=DI1 marcha, 19=DI2, 20=común digital, 53=AI1 referencia, 55=común analógico) y un sistema de bypass de mantenimiento con TRES contactores: KM1 (entrada al variador), KM2 (salida del variador al motor) y KM3 (puente directo de línea al motor). SEL es un conmutador de 3 terminales REAL que elige el modo (vía A = variador, vía B = bypass); KMA (que cierra KM1+KM2) y KMB (que cierra KM3) quedan enclavados entre sí — KM2 y KM3 JAMÁS deben cerrar juntos, o la salida del variador quedaría en paralelo con la línea.",
   control: {
     source: ["railL"],
     return: ["railN"],
@@ -2912,8 +2909,7 @@ const vfdBypassCombined = {
       C("H2", "H2 modo bypass", TPL.lamp("H2", "red"), 780, 220),
       C("H3", "H3 en marcha", TPL.lamp("H3", "green"), 940, 220),
 
-      C("SELa", "SEL Modo VFD", TPL.wayContact("A", "modo-a", "com", "a"), 240, 220, { toggle: true, pairedWith: "SELb" }),
-      C("SELb", "SEL Modo Bypass", TPL.wayContact("B", "modo-b", "com", "b"), 400, 220, { toggle: true, pairedWith: "SELa" }),
+      C("SEL", "SEL Modo VFD/Bypass", TPL.threeWaySwitch("SEL", "com", "a", "b"), 320, 220, { toggle: true }),
 
       C("S1vfd", "S1 Marcha (VFD)", TPL.button("NO", "3-4", "3", "4"), 160, 320, { manual: true }),
       C("KMAaux1", "KMA (sello)", TPL.contact("NO", "13-14", "13", "14"), 300, 320, { derivedFrom: "KMAcoil" }),
@@ -2932,11 +2928,11 @@ const vfdBypassCombined = {
     ],
     nets: [
       ["railL", "F2.95", "KMAaux2.23", "KMBaux2.23", "VFDrelay.04"],
-      ["F2.96", "SELa.com", "SELb.com"],
-      ["SELa.a", "S1vfd.3", "KMAaux1.13"],
+      ["F2.96", "SEL.com"],
+      ["SEL.a", "S1vfd.3", "KMAaux1.13"],
       ["S1vfd.4", "KMAaux1.14", "KMBaux_i.21"],
       ["KMBaux_i.22", "KMAcoil.A1"],
-      ["SELb.b", "S1byp.3", "KMBaux1.13"],
+      ["SEL.b", "S1byp.3", "KMBaux1.13"],
       ["S1byp.4", "KMBaux1.14", "KMAaux_i.21"],
       ["KMAaux_i.22", "KMBcoil.A1"],
       ["KMAaux2.24", "H1.X1"],
@@ -2988,7 +2984,7 @@ const vfdBypassCombined = {
     ],
   },
   simulation: [
-    cLogStep("El sistema arranca en modo VFD (SELa cerrado por defecto, bypass desactivado)."),
+    cLogStep("El sistema arranca en modo VFD (SEL en reposo, vía A)."),
     cLogStep("Presionas S1vfd (marcha en modo variador)..."),
     cActStep((dc, dp) => {
       dc.setClosed("S1vfd", true);
@@ -3005,10 +3001,9 @@ const vfdBypassCombined = {
       dp.setRunning("M", true);
     }, "KMA se energiza y cierra KM1 (entrada) y KM2 (salida): el variador recibe línea, la señal DI1 le da la orden de marcha, y el motor gira controlado por el variador.", 1100),
     cActStep((dc) => { dc.setClosed("S1vfd", false); }, "Sueltas S1vfd — KMA se mantiene sellado.", 800),
-    cLogStep("Por mantenimiento, cambias el selector a modo Bypass (SELa abre, SELb cierra)..."),
+    cLogStep("Por mantenimiento, cambias el selector a modo Bypass (SEL conmuta a la vía B)..."),
     cActStep((dc, dp) => {
-      dc.setClosed("SELa", false);
-      dc.setClosed("SELb", true);
+      dc.setClosed("SEL", true);
       dc.setEnergized("KMAcoil", false);
       dc.setClosed("KMAaux1", false);
       dc.setClosed("KMAaux2", false);
@@ -3020,7 +3015,7 @@ const vfdBypassCombined = {
       dp.setClosed("KM2a", false); dp.setClosed("KM2b", false); dp.setClosed("KM2c", false);
       dp.setRunning("VFD", false);
       dp.setRunning("M", false);
-    }, "Como la ruta de KMA pasaba por SELa, al abrirse KMA se desenergiza de inmediato: el variador se detiene solo. Ahora hay que arrancar el bypass a mano.", 1300),
+    }, "El común de SEL salta de la vía A a la B: la ruta de sello de KMA pasaba por la vía A, así que KMA se desenergiza de inmediato y el variador se detiene solo. Ahora hay que arrancar el bypass a mano.", 1300),
     cLogStep("Presionas S1byp (marcha en modo bypass)..."),
     cActStep((dc, dp) => {
       dc.setClosed("S1byp", true);
