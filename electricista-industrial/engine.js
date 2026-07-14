@@ -292,6 +292,67 @@ TPL.pole = (ref, tin, tout) => ({
   },
 });
 
+// contactor trifasico REAL: un solo componente con sus 3 entradas y 3
+// salidas (L1-L2-L3 / T1-T2-T3), los tres polos abriendo y cerrando juntos
+// con UNA sola bobina — en vez de tres componentes de un polo sueltos
+// (K1a/K1b/K1c) que hay que wire por separado sin que se vea que son el
+// mismo dispositivo fisico.
+TPL.contactor3p = (ref) => {
+  const xs = [-24, 0, 24];
+  const terms = {};
+  xs.forEach((dx, i) => { terms["L" + (i + 1)] = { x: dx, y: -40 }; terms["T" + (i + 1)] = { x: dx, y: 40 }; });
+  return {
+    w: 96, h: 116,
+    gate: true,
+    poles: [["L1", "T1"], ["L2", "T2"], ["L3", "T3"]],
+    terminals: terms,
+    draw(g) {
+      for (const dx of xs) {
+        g.appendChild(svgEl("line", { x1: dx, y1: -40, x2: dx, y2: -30, class: "cable-core" }));
+        g.appendChild(svgEl("line", { x1: dx, y1: 30, x2: dx, y2: 40, class: "cable-core" }));
+      }
+      g.appendChild(svgEl("rect", { x: -42, y: -34, width: 84, height: 68, rx: 5, class: "contact-housing", filter: "url(#fDrop)" }));
+      for (const dx of xs) {
+        g.appendChild(svgEl("line", { x1: dx - 8, y1: -22, x2: dx + 8, y2: -22, class: "blade-fixed" }));
+        g.appendChild(svgEl("line", { x1: dx - 8, y1: 22, x2: dx + 8, y2: 22, class: "blade-fixed" }));
+        g.appendChild(svgEl("line", { x1: dx, y1: -22, x2: dx, y2: 22, class: "blade" }));
+      }
+      g.appendChild(text(0, 4, ref, "nameplate-label"));
+      for (const dx of xs) { screwAt(g, dx, -40, 5); screwAt(g, dx, 40, 5); }
+      g.appendChild(text(0, -48, "L1   L2   L3", "sym-label-small"));
+      g.appendChild(text(0, 54, "T1   T2   T3", "sym-label-small"));
+    },
+  };
+};
+
+// guardamotor / seccionador trifasico REAL: mismas 3 entradas/3 salidas de
+// un solo golpe, pero operado manualmente con una sola palanca (como un
+// interruptor termomagnetico o desconectador de verdad), no por una bobina
+TPL.breaker3p = (ref) => {
+  const xs = [-24, 0, 24];
+  const terms = {};
+  xs.forEach((dx, i) => { terms["L" + (i + 1)] = { x: dx, y: -40 }; terms["T" + (i + 1)] = { x: dx, y: 40 }; });
+  return {
+    w: 96, h: 116,
+    gate: true,
+    restClosed: true,
+    poles: [["L1", "T1"], ["L2", "T2"], ["L3", "T3"]],
+    terminals: terms,
+    draw(g) {
+      for (const dx of xs) {
+        g.appendChild(svgEl("line", { x1: dx, y1: -40, x2: dx, y2: -30, class: "cable-core" }));
+        g.appendChild(svgEl("line", { x1: dx, y1: 30, x2: dx, y2: 40, class: "cable-core" }));
+      }
+      isoBox(g, 0, 0, 84, 68, 5, 8, "brk-body", "brk-top", "brk-side");
+      g.appendChild(svgEl("rect", { x: -7, y: -16, width: 14, height: 32, rx: 3, class: "brk-lever btn-pressable" }));
+      for (const dx of xs) { screwAt(g, dx, -40, 5); screwAt(g, dx, 40, 5); }
+      g.appendChild(text(0, -48, "L1   L2   L3", "sym-label-small"));
+      g.appendChild(text(0, 54, "T1   T2   T3", "sym-label-small"));
+      g.appendChild(text(50, 3, ref, "sym-ref", "start"));
+    },
+  };
+};
+
 TPL.limitSwitch = (kind, ref, t1, t2) => ({
   // interruptor de limite (fin de carrera): mismo contacto NA/NC, con
   // palanca y rodillo en vez de capuchon de boton
@@ -467,6 +528,58 @@ TPL.vfd = () => ({
     g.appendChild(text(0, 62, "U   V   W", "sym-label-small"));
   },
 });
+
+// variador UNIFICADO: potencia (L1-L2-L3 / U-V-W) Y control (E/S de bajo
+// voltaje) en un SOLO componente, en un solo plano — asi como es un
+// variador real (un solo aparato), en vez de partirlo entre un plano de
+// control y uno de fuerza como en TPL.vfd()/TPL.vfdControlIO() por separado.
+TPL.vfdUnified = () => {
+  const ctrlTerms = {
+    12: { x: 100, y: -45 }, 18: { x: 100, y: -25 }, 19: { x: 100, y: -5 },
+    20: { x: 100, y: 15 }, 53: { x: 100, y: 35 }, 55: { x: 100, y: 55 },
+  };
+  const ctrlLabels = { 12: "+24V", 18: "DI1", 19: "DI2", 20: "COM", 53: "AI1", 55: "COM" };
+  return {
+    w: 240, h: 130,
+    terminals: {
+      L1: { x: -24, y: -46 }, L2: { x: 0, y: -46 }, L3: { x: 24, y: -46 },
+      U: { x: -24, y: 46 }, V: { x: 0, y: 46 }, W: { x: 24, y: 46 },
+      ...ctrlTerms,
+    },
+    draw(g) {
+      for (const dx of [-24, 0, 24]) {
+        g.appendChild(svgEl("line", { x1: dx, y1: -46, x2: dx, y2: -36, class: "cable-core" }));
+        g.appendChild(svgEl("line", { x1: dx, y1: 36, x2: dx, y2: 46, class: "cable-core" }));
+      }
+      isoBox(g, 0, 0, 76, 84, 6, 9, "vfd-body", "vfd-top", "vfd-side");
+      g.appendChild(svgEl("rect", { x: -30, y: -26, width: 60, height: 22, rx: 2, class: "vfd-screen" }));
+      g.appendChild(text(0, -14, "60.0 Hz", "vfd-readout"));
+      for (let i = 0; i < 5; i++) {
+        g.appendChild(svgEl("rect", {
+          x: -26 + i * 12, y: 6, width: 8, height: 6 + i * 3, class: "vfd-bar",
+          style: `animation-delay:${i * 0.09}s`,
+        }));
+      }
+      g.appendChild(text(0, 34, "VARIADOR", "nameplate-sub"));
+      for (const dx of [-24, 0, 24]) { screwAt(g, dx, -46, 5.5); screwAt(g, dx, 46, 5.5); }
+      g.appendChild(text(0, -56, "L1  L2  L3", "sym-label-small"));
+      g.appendChild(text(0, 62, "U   V   W", "sym-label-small"));
+
+      // tablilla de control anexa al MISMO equipo — mismo variador, sus
+      // terminales de bajo voltaje simplemente quedan del otro lado
+      g.appendChild(svgEl("line", { x1: 40, y1: 0, x2: 55, y2: 0, class: "cable-core" }));
+      g.appendChild(svgEl("rect", { x: 55, y: -60, width: 110, height: 130, rx: 4, class: "terminal-box", filter: "url(#fDrop)" }));
+      for (const name in ctrlTerms) {
+        const p = ctrlTerms[name];
+        screwAt(g, p.x, p.y, 4.4);
+        // el numero de terminal ya lo dibuja el motor de terminales junto al
+        // punto de conexion — aqui solo se agrega la descripcion, en la misma
+        // fila y mas a la derecha, para no duplicar/encimar esa etiqueta
+        g.appendChild(text(p.x + 34, p.y + 3, ctrlLabels[name], "sym-label-small", "start"));
+      }
+    },
+  };
+};
 
 // tablilla de entradas/salidas de control de un variador real: como un
 // motor, no conmuta nada por si misma — solo expone los puntos de conexion
@@ -763,6 +876,36 @@ TPL.wayContact = (posLabel, ref, t1, t2) => ({
     g.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 16, class: "sel-hit btn-pressable" }));
     g.appendChild(text(0, 20, posLabel, "sym-label-small"));
     g.appendChild(text(18, 3, ref, "sym-ref", "start"));
+  },
+});
+
+// conmutador de 3 vias REAL: un solo componente con sus 3 terminales de
+// verdad (comun + 2 vias), en vez de dos contactos de 2 terminales
+// enlazados con pairedWith. El comun siempre conmuta a UNA sola via.
+TPL.threeWaySwitch = (ref, tcom, ta, tb) => ({
+  w: 60, h: 68,
+  gate: true,
+  restClosed: false,
+  changeover: [ta, tb],
+  common: tcom,
+  terminals: {
+    [tcom]: { x: 0, y: 30 }, [ta]: { x: -24, y: -30 }, [tb]: { x: 24, y: -30 },
+  },
+  draw(g) {
+    g.appendChild(svgEl("line", { x1: 0, y1: 30, x2: 0, y2: 15, class: "cable-core" }));
+    g.appendChild(svgEl("line", { x1: -24, y1: -30, x2: -24, y2: -15, class: "cable-core" }));
+    g.appendChild(svgEl("line", { x1: 24, y1: -30, x2: 24, y2: -15, class: "cable-core" }));
+    g.appendChild(svgEl("line", { x1: 0, y1: 0, x2: -24, y2: -15, class: "threeway-path threeway-a" }));
+    g.appendChild(svgEl("line", { x1: 0, y1: 0, x2: 24, y2: -15, class: "threeway-path threeway-b" }));
+    g.appendChild(svgEl("line", { x1: 0, y1: 0, x2: 0, y2: 15, class: "cable-core" }));
+    g.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 15, class: "sel-body" }));
+    g.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 2.4, class: "sel-hub" }));
+    g.appendChild(svgEl("circle", { cx: 0, cy: 0, r: 19, class: "sel-hit btn-pressable" }));
+    screwAt(g, 0, 30, 5); screwAt(g, -24, -30, 5); screwAt(g, 24, -30, 5);
+    g.appendChild(text(-24, -38, "A", "sym-label-small"));
+    g.appendChild(text(24, -38, "B", "sym-label-small"));
+    g.appendChild(text(0, 44, tcom.toUpperCase(), "sym-label-small"));
+    g.appendChild(text(30, 3, ref, "sym-ref", "start"));
   },
 });
 
@@ -1198,7 +1341,24 @@ class Diagram {
       for (const [k, set] of baseAdj) adj.set(k, new Set(set));
       for (const gc of gateComps) {
         const grp = this.compGroups.get(gc.id);
-        if (grp && grp.classList.contains("closed")) {
+        if (!grp) continue;
+        if (gc.tpl.poles) {
+          // varios polos independientes que abren y cierran juntos, con un
+          // solo estado mecanico compartido — un contactor o guardamotor
+          // trifasico real: tres circuitos separados (L1-T1, L2-T2, L3-T3)
+          // gobernados por una sola bobina o palanca, en vez de tres
+          // componentes de 2 terminales sueltos
+          if (grp.classList.contains("closed")) {
+            for (const [a, b] of gc.tpl.poles) addE(adj, gc.id + "." + a, gc.id + "." + b);
+          }
+        } else if (gc.tpl.changeover) {
+          // interruptor de 3 terminales (comun + 2 vias): el comun siempre
+          // queda unido a UNA sola via, nunca a las dos ni a ninguna — como
+          // la palanca fisica de un conmutador de 3 vias real
+          const [posA, posB] = gc.tpl.changeover;
+          const which = grp.classList.contains("closed") ? posB : posA;
+          addE(adj, gc.id + "." + gc.tpl.common, gc.id + "." + which);
+        } else if (grp.classList.contains("closed")) {
           const names = Object.keys(gc.tpl.terminals);
           addE(adj, gc.id + "." + names[0], gc.id + "." + names[1]);
         }

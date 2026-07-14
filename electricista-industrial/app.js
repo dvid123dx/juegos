@@ -60,6 +60,7 @@ const GROUP_LABELS = {
   respaldo: "Energía de Respaldo (ATS)",
   calefaccion: "Calefacción y Protección de Motores",
   izaje: "Grúas y Polipastos (Izaje)",
+  "formato-real": "Componentes en Formato Industrial Real",
 };
 
 const LEVEL_LABELS = {
@@ -971,6 +972,10 @@ const FREE_PALETTE = [
   { key: "selector", label: "Selector de 2 posiciones", make: (n) => ({ prefix: "SEL", tpl: () => TPL.selector("0-1", "0", "1"), toggle: true }) },
   { key: "fuse", label: "Fusible", make: (n) => ({ prefix: "F", tpl: () => TPL.fuse("F" + n, "1", "2"), toggle: true }) },
   { key: "pole", label: "Polo de potencia (contactor/guardamotor)", make: (n) => ({ prefix: "L", tpl: () => TPL.pole("1-2", "1", "2") }) },
+  { key: "threeWay", label: "Conmutador de 3 vías (3 terminales)", make: (n) => ({ prefix: "SW", tpl: () => TPL.threeWaySwitch("SW" + n, "com", "a", "b"), toggle: true }) },
+  { key: "contactor3p", label: "Contactor trifásico (6 terminales)", make: (n) => ({ prefix: "K", tpl: () => TPL.contactor3p("K" + n) }) },
+  { key: "breaker3p", label: "Seccionador/guardamotor trifásico (6 terminales)", make: (n) => ({ prefix: "Q", tpl: () => TPL.breaker3p("Q" + n), toggle: true }) },
+  { key: "vfdUnified", label: "Variador unificado (potencia + control)", make: (n) => ({ prefix: "VFD", tpl: () => TPL.vfdUnified() }) },
   { key: "motor3", label: "Motor trifásico (3 puntas)", make: (n) => ({ prefix: "M", tpl: () => TPL.motor(true) }) },
   { key: "motor6", label: "Motor trifásico (6 puntas)", make: (n) => ({ prefix: "M", tpl: () => TPL.motor(false) }) },
   { key: "motor1ph", label: "Motor monofásico", make: (n) => ({ prefix: "M", tpl: () => TPL.singlePhaseMotor() }) },

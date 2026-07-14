@@ -1661,9 +1661,9 @@ const staircaseSwitches = {
   id: "staircase-switches",
   group: "residencial",
   kind: "circuito",
-  level: 1,
+  level: 2,
   title: "Escalera con Conmutadores de 3 Vías",
-  brief: "Cablea una lámpara controlada desde dos puntos (arriba y abajo de la escalera) con dos conmutadores de 3 vías. Cada conmutador real es una sola palanca de 3 terminales; aquí se dibuja como dos contactos enlazados (A/B) que siempre están en posiciones opuestas — igual que el brazo mecánico real. La lámpara enciende cuando ambos coinciden en la misma posición.",
+  brief: "Cablea una lámpara controlada desde dos puntos (arriba y abajo de la escalera) con dos conmutadores de 3 vías REALES: cada uno es un solo componente con sus 3 terminales de verdad (común + vías A/B) — la misma palanca mecánica que conmuta a una vía u otra, nunca a las dos. Los dos «viajeros» (A-A y B-B) van directo de un conmutador al otro; la lámpara enciende cuando ambas palancas coinciden en la misma vía.",
   vb: [620, 460],
   source: ["railL"],
   return: ["railN"],
@@ -1671,35 +1671,31 @@ const staircaseSwitches = {
     railComp("railL", true, 480, "L", 320, 60),
     railComp("railN", true, 480, "N", 320, 400),
     C("Q1", "Q1 interruptor", TPL.mcb("Q1", "1", "2"), 220, 130, { toggle: true }),
-    C("SW1a", "SW1", TPL.wayContact("A", "com-a", "com", "a"), 260, 220, { toggle: true, pairedWith: "SW1b" }),
-    C("SW1b", "SW1", TPL.wayContact("B", "com-b", "com", "b"), 360, 220, { toggle: true, pairedWith: "SW1a" }),
-    C("SW2a", "SW2", TPL.wayContact("A", "com-a", "com", "a"), 260, 320, { toggle: true, pairedWith: "SW2b" }),
-    C("SW2b", "SW2", TPL.wayContact("B", "com-b", "com", "b"), 360, 320, { toggle: true, pairedWith: "SW2a" }),
-    C("H1", "H1 lámpara", TPL.lamp("H1", "green"), 500, 320),
+    C("SW1", "SW1", TPL.threeWaySwitch("SW1", "com", "a", "b"), 260, 240, { toggle: true }),
+    C("SW2", "SW2", TPL.threeWaySwitch("SW2", "com", "a", "b"), 460, 240, { toggle: true }),
+    C("H1", "H1 lámpara", TPL.lamp("H1", "green"), 500, 340),
   ],
   nets: [
     ["railL", "Q1.1"],
-    ["Q1.2", "SW1a.com", "SW1b.com"],
-    ["SW1a.a", "SW2a.a"],
-    ["SW1b.b", "SW2b.b"],
-    ["SW2a.com", "SW2b.com", "H1.X1"],
+    ["Q1.2", "SW1.com"],
+    ["SW1.a", "SW2.a"],
+    ["SW1.b", "SW2.b"],
+    ["SW2.com", "H1.X1"],
     ["railN", "H1.X2"],
   ],
   simulation: [
-    logStep("Ambos interruptores empiezan en posición A — la lámpara está encendida."),
-    actStep((d) => { d.setEnergized("H1", true); }, "Camino cerrado: SW1(A) coincide con SW2(A).", 800),
-    logStep("Subes la escalera y accionas SW2..."),
+    logStep("Ambos conmutadores empiezan en reposo (vía A) — sus dos palancas coinciden."),
+    actStep((d) => { d.setEnergized("H1", true); }, "El común de SW1 pasa por la vía A hasta SW2, y el común de SW2 también está en A: camino cerrado, la lámpara enciende.", 900),
+    logStep("Subes la escalera y accionas la palanca de SW2..."),
     actStep((d) => {
-      d.setClosed("SW2a", false);
-      d.setClosed("SW2b", true);
+      d.setClosed("SW2", true);
       d.setEnergized("H1", false);
-    }, "SW2 pasa a posición B — ya no coincide con SW1(A): la lámpara se apaga.", 900),
-    logStep("Desde arriba, accionas SW2 otra vez..."),
+    }, "El común de SW2 salta a la vía B — pero el viajero que le llega de SW1 sigue siendo el de la vía A: ya no hay continuidad, la lámpara se apaga.", 1000),
+    logStep("Desde arriba, accionas la palanca de SW1 también..."),
     actStep((d) => {
-      d.setClosed("SW2a", true);
-      d.setClosed("SW2b", false);
+      d.setClosed("SW1", true);
       d.setEnergized("H1", true);
-    }, "SW2 vuelve a A — coincide de nuevo con SW1: la lámpara enciende. Puedes controlarla desde cualquiera de los dos puntos.", 900),
+    }, "Ahora SW1 también conmuta a B: los dos comunes vuelven a coincidir en la misma vía (B) y la lámpara enciende de nuevo. Así se controla desde cualquiera de los dos puntos, sin importar cuál palanca se mueva.", 1000),
   ],
 };
 
@@ -3039,6 +3035,91 @@ const vfdBypassCombined = {
   ],
 };
 
+/* =========================================================
+   EJERCICIO: Arrancador Directo — Formato Industrial Real
+   (contactor y seccionador trifásicos como UN SOLO dispositivo
+   de 6 terminales, en vez de tres polos sueltos)
+   ========================================================= */
+
+const contactorFormatoReal = {
+  id: "contactor-formato-real",
+  group: "formato-real",
+  kind: "fuerza",
+  level: 2,
+  title: "Arrancador Directo — Formato Industrial Real",
+  brief: "Este circuito de fuerza usa los componentes trifásicos como son de verdad: Q1 (seccionador) y K1 (contactor) son cada uno UN SOLO dispositivo con sus 3 entradas (L1-L2-L3) y sus 3 salidas (T1-T2-T3), gobernado por una sola palanca o bobina — no tres interruptores independientes que casualmente se conectan igual. Cablea L1-L2-L3 a través de Q1 y K1 hasta el motor.",
+  vb: [520, 660],
+  components: [
+    railComp("railL1", true, 300, "L1", 260, 60),
+    railComp("railL2", true, 300, "L2", 260, 100),
+    railComp("railL3", true, 300, "L3", 260, 140),
+    C("Q1", "Q1 seccionador", TPL.breaker3p("Q1"), 260, 260, { toggle: true }),
+    C("K1", "K1 contactor", TPL.contactor3p("K1"), 260, 420),
+    C("M", "Motor", TPL.motor(true), 260, 570),
+  ],
+  nets: [
+    ["railL1", "Q1.L1"],
+    ["railL2", "Q1.L2"],
+    ["railL3", "Q1.L3"],
+    ["Q1.T1", "K1.L1"],
+    ["Q1.T2", "K1.L2"],
+    ["Q1.T3", "K1.L3"],
+    ["K1.T1", "M.U1"],
+    ["K1.T2", "M.V1"],
+    ["K1.T3", "M.W1"],
+  ],
+  simulation: [
+    logStep("Antes de energizar nada, cierras el seccionador Q1..."),
+    actStep((d) => { d.setClosed("Q1", true); }, "Q1 es UN SOLO seccionador trifásico: sus 3 polos (L1-T1, L2-T2, L3-T3) se mueven juntos con la misma palanca — nunca uno solo se queda atrás. Ahora las 3 fases llegan hasta K1.", 1100),
+    logStep("El circuito de control (en otra pantalla) energiza la bobina de K1..."),
+    actStep((d) => { d.setClosed("K1", true); d.setRunning("M", true); }, "K1 también es un solo contactor trifásico: sus 3 polos cierran a la vez con UNA sola bobina, alimentando el motor en sus 3 fases al mismo instante. Así es un contactor real, no tres interruptores sueltos.", 1200),
+    logStep("La bobina de K1 se desenergiza..."),
+    actStep((d) => { d.setClosed("K1", false); d.setRunning("M", false); }, "Los 3 polos de K1 abren juntos — el motor se detiene de inmediato. Q1 sigue cerrado, listo para un nuevo arranque.", 1000),
+  ],
+};
+
+/* =========================================================
+   EJERCICIO: Variador Unificado (Control + Potencia en un solo plano)
+   ========================================================= */
+
+const vfdUnifiedExercise = {
+  id: "vfd-unified",
+  group: "variador",
+  kind: "circuito",
+  level: 2,
+  title: "Variador Unificado (Control + Potencia)",
+  brief: "Un variador real es UN SOLO equipo: sus terminales de potencia (L1-L2-L3 de entrada, U-V-W hacia el motor) y sus terminales de control de bajo voltaje (12, 18, 19, 20, 53, 55) conviven en el mismo gabinete. Aquí se cablean ambos en un solo plano, sin dividirlo artificialmente en dos pantallas. Un conmutador SEL de 3 terminales selecciona el sentido: posición A energiza DI1 (adelante), posición B energiza DI2 (reversa).",
+  vb: [900, 560],
+  components: [
+    railComp("railL1", true, 260, "L1", 260, 60),
+    railComp("railL2", true, 260, "L2", 260, 100),
+    railComp("railL3", true, 260, "L3", 260, 140),
+    C("VFD", "Variador (E/S + Potencia)", TPL.vfdUnified(), 470, 260),
+    C("SEL", "SEL sentido", TPL.threeWaySwitch("SEL", "com", "fwd", "rev"), 740, 190, { toggle: true }),
+    C("M", "Motor", TPL.motor(true), 470, 430),
+  ],
+  nets: [
+    ["railL1", "VFD.L1"],
+    ["railL2", "VFD.L2"],
+    ["railL3", "VFD.L3"],
+    ["VFD.U", "M.U1"],
+    ["VFD.V", "M.V1"],
+    ["VFD.W", "M.W1"],
+    ["VFD.12", "SEL.com"],
+    ["SEL.fwd", "VFD.18"],
+    ["SEL.rev", "VFD.19"],
+  ],
+  simulation: [
+    logStep("El variador ya recibe las 3 fases L1-L2-L3 en su mitad de potencia..."),
+    actStep((d) => { }, "Nota que es el MISMO componente el que tiene, del otro lado, la tablilla de control de bajo voltaje (12, 18, 19, 20, 53, 55) — un variador real no separa esto en dos aparatos.", 1100),
+    logStep("El operador deja SEL en reposo (posición A)..."),
+    actStep((d) => { d.setRunning("M", true); }, "SEL en A: el +24V del terminal 12 llega a DI1 (18) — el variador rampa la frecuencia y el motor arranca en sentido ADELANTE.", 1100),
+    logStep("El operador acciona SEL a la posición B..."),
+    actStep((d) => { d.setClosed("SEL", true); }, "El común de SEL salta a la vía B: ahora el +24V llega a DI2 (19) en vez de DI1. El variador detecta el cambio de entrada digital...", 1000),
+    actStep((d) => { d.setRunning("M", true); }, "...y rampa el motor en sentido REVERSA. Un solo conmutador de 3 terminales, sin botoneras dobles, decide la dirección de giro.", 1000),
+  ],
+};
+
 const EXERCISES = [
   dolControl, dolPower, revControl, ydControl, ydPower, autoControl, autoPower,
   twoSpeedControl, twoSpeedPower, alarmControl,
@@ -3051,7 +3132,7 @@ const EXERCISES = [
   slidingDoorCombined, estopMcrControl, compressorControl, photoSorterControl,
   hvacFanControl, sumpPumpControl, airlockInterlockControl, atsControl,
   pullCordChainControl, antiCondensationHeaterControl, hoistLimitControl,
-  vfdBypassCombined,
+  vfdBypassCombined, contactorFormatoReal, vfdUnifiedExercise,
 ];
 
 /* =========================================================
@@ -3163,6 +3244,30 @@ const EXPLORER = [
     desc: "Protege contra cortocircuitos y sobrecargas, y permite desconectar manualmente el circuito. Se instala antes de los contactores en la línea de fuerza.",
     notes: "Combina la función del fusible (corto) y del térmico (sobrecarga) en un solo dispositivo rearmable manualmente, a diferencia del fusible que hay que reemplazar.",
     face: "guardamotor",
+  },
+  {
+    id: "contactor-3p", name: "Contactor Trifásico (formato real, 6 terminales)", tag: "K1 (L1-L2-L3 / T1-T2-T3)",
+    desc: "El mismo contactor de arriba, pero dibujado como es en la vida real: UN SOLO cuerpo con 3 entradas (L1-L2-L3) y 3 salidas (T1-T2-T3), los tres polos moviéndose siempre juntos con la misma bobina — no tres interruptores de un polo colocados uno al lado del otro por casualidad.",
+    notes: "Al cablear este formato, una sola conexión a la bobina cierra las tres fases a la vez; si un polo se ve cerrado y otro abierto es señal de una falla mecánica del contactor, no de un error de cableado.",
+    face: "contactor",
+  },
+  {
+    id: "seccionador-3p", name: "Seccionador/Guardamotor Trifásico (formato real, 6 terminales)", tag: "Q1 (L1-L2-L3 / T1-T2-T3)",
+    desc: "Igual que el guardamotor de arriba, pero como aparato real de 6 terminales: una sola palanca abre o cierra las 3 fases a la vez (L1-T1, L2-T2, L3-T3), permitiendo aislar todo el circuito de fuerza con un solo movimiento antes de dar mantenimiento.",
+    notes: "Siempre se opera en posición ABIERTA antes de tocar cualquier cable de fuerza aguas abajo — es el punto de bloqueo/etiquetado (lockout/tagout) del circuito.",
+    face: "guardamotor",
+  },
+  {
+    id: "conmutador-3-vias", name: "Conmutador de 3 Vías (escalera)", tag: "SW1 (COM / A / B)",
+    desc: "Interruptor de una sola palanca con 3 terminales reales: un común y dos vías. El común siempre queda unido a UNA de las dos vías, nunca a las dos ni a ninguna. Con dos de estos conmutadores enlazados por sus vías (viajeros) se controla una misma lámpara desde dos puntos distintos — el clásico circuito de escalera.",
+    notes: "No confundir con un selector de 2 posiciones: el conmutador de 3 vías tiene un terminal común fijo que SIEMPRE tiene continuidad hacia una de las vías, mientras que un selector simple solo abre o cierra un único contacto.",
+    face: "selector",
+  },
+  {
+    id: "vfd-unificado", name: "Variador Unificado (Potencia + Control)", tag: "VFD (L1-L2-L3/U-V-W · 12-18-19-20-53-55)",
+    desc: "El variador de frecuencia como aparato real: potencia (L1-L2-L3 de entrada, U-V-W hacia el motor) y control de bajo voltaje (12=+24V, 18/19=entradas digitales, 20=común digital, 53=entrada analógica, 55=común analógico) viven en el MISMO gabinete — no se reparten en dos planos distintos como si fueran dos equipos.",
+    notes: "En campo, cablear mal el control de un variador (por ejemplo confundir 18 con 53) no daña la potencia, pero deja al variador sin poder arrancar o con una referencia de velocidad incorrecta.",
+    face: "vfd",
   },
   {
     id: "transformador-control", name: "Transformador de Control", tag: "TC",
@@ -3519,4 +3624,12 @@ const QUIZ = [
   { q: "En un bypass con KM1 (entrada al variador), KM2 (salida del variador al motor) y KM3 (puente directo), ¿qué par de contactores NUNCA debe cerrar a la vez?", a: ["KM2 y KM3", "KM1 y KM2", "KM1 y KM3", "Los tres pueden cerrar juntos sin ningún problema"], correct: 0 },
   { q: "¿Qué pasaría si KM2 (salida del variador) y KM3 (bypass) cerraran al mismo tiempo?", a: ["La salida del variador quedaría en paralelo con la línea, una falla grave", "El motor simplemente giraría el doble de rápido de lo normal en ese instante", "No pasaría nada relevante, es una condición perfectamente segura", "El variador aumentaría automáticamente su frecuencia de salida real"], correct: 0 },
   { q: "En un sistema de bypass, ¿por qué cambiar el selector de modo mientras el variador está en marcha suele desenergizar el contactor de esa rama?", a: ["Porque la ruta de sello del contactor pasa por el propio selector de modo", "Porque el selector de modo siempre corta la alimentación general del tablero", "Porque el variador se apaga automáticamente al detectar cualquier selector", "No debería pasar nada — es un comportamiento indeseado y anómalo"], correct: 0 },
+
+  // ---- Formato real de componentes trifasicos y conmutadores ----
+  { q: "En un contactor trifásico REAL de 6 terminales (L1-L2-L3 / T1-T2-T3), ¿qué relación hay entre sus 3 polos?", a: ["Cada polo tiene su propia bobina independiente de los otros dos", "Los tres polos abren y cierran siempre juntos, gobernados por una sola bobina", "Solo dos de los tres polos conmutan; el tercero es siempre fijo", "Los polos conmutan en secuencia, uno después del otro"], correct: 1 },
+  { q: "¿Qué terminal de un conmutador de 3 vías (escalera) SIEMPRE tiene continuidad hacia una de las dos vías?", a: ["El común (COM)", "La vía A únicamente", "La vía B únicamente", "Ninguno — el conmutador puede dejar los tres terminales aislados"], correct: 0 },
+  { q: "¿Por qué un circuito de escalera con dos conmutadores de 3 vías permite controlar la misma lámpara desde dos puntos?", a: ["Porque cada conmutador tiene su propia lámpara independiente", "Porque los dos viajeros (A-A y B-B) forman un solo camino que se cierra cuando ambos comunes coinciden en la misma vía", "Porque la lámpara se enciende automáticamente sin importar la posición de los conmutadores", "Porque uno de los dos conmutadores siempre queda inutilizado"], correct: 1 },
+  { q: "En un seccionador/guardamotor trifásico REAL (6 terminales), ¿con qué se opera sus 3 polos?", a: ["Con tres palancas independientes, una por fase", "Con una sola palanca mecánica que mueve los 3 polos a la vez", "Con una bobina auxiliar exclusiva para cada polo", "Los polos no se pueden abrir manualmente, solo por falla"], correct: 1 },
+  { q: "¿Cuál es la ventaja pedagógica de dibujar un contactor trifásico como UN SOLO componente de 6 terminales en vez de tres polos sueltos?", a: ["Ninguna — es exactamente lo mismo de cualquier forma", "Refleja que es un solo aparato físico con un único estado mecánico/eléctrico, evitando pensar que son tres interruptores independientes", "Hace el cableado más difícil sin ninguna razón práctica", "Solo cambia el color del símbolo en el plano"], correct: 1 },
+  { q: "En un variador de frecuencia 'unificado' (potencia + control en un solo componente), ¿por qué se representa así en vez de separarlo en dos planos?", a: ["Porque el variador real es un solo gabinete físico: sus terminales de potencia y de control conviven en el mismo equipo", "Porque los variadores reales no tienen terminales de control, solo de potencia", "Porque separar potencia y control en dos planos es obligatorio por norma", "Porque así se reduce el número de terminales del equipo real"], correct: 0 },
 ];
